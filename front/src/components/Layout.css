@@ -94,6 +94,28 @@
   max-width: 1400px;
 }
 
+.contenido:has(.utilidades) {
+  max-width: none;
+  padding: 0;
+  background: #f4f7fa;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  transform: translateY(-150%);
+  border-radius: 6px;
+  background: #173f5e;
+  color: #fff;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 /* --- Colapso a iconos en pantallas estrechas --- */
 
 @media (max-width: 900px) {

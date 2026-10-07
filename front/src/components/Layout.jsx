@@ -10,6 +10,7 @@ export default function Layout() {
   return (
     <div className="layout">
       <aside className="sidebar">
+        <a className="skip-link" href="#contenido-principal">Saltar al contenido</a>
         <div className="marca">
           <span className="marca-logo">F</span>
           <span className="marca-texto">FRIDAY</span>
@@ -35,7 +36,7 @@ export default function Layout() {
         </nav>
       </aside>
 
-      <main className="contenido">
+      <main className="contenido" id="contenido-principal" tabIndex={-1}>
         <Outlet />
       </main>
     </div>
