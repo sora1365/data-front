@@ -1,41 +1,46 @@
 .layout {
   display: flex;
   min-height: 100vh;
+  background: var(--container-bg);
 }
 
 /* --- Sidebar --- */
 
 .sidebar {
-  width: 240px;
+  width: 252px;
   flex-shrink: 0;
   background: var(--primary-dark);
   color: var(--text-on-dark-soft);
   display: flex;
   flex-direction: column;
-  padding: 1.25rem 0;
+  padding: 1.35rem 0 1rem;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  border-right: 1px solid rgb(255 255 255 / 7%);
+  scrollbar-color: #334b69 transparent;
+  scrollbar-width: thin;
 }
 
 .marca {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0 1.25rem 1.5rem;
+  padding: 0 1.25rem 1.25rem;
 }
 
 .marca-logo {
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border-radius: 7px;
+  border-radius: 9px;
   background: var(--primary-200);
   color: var(--primary-dark);
   font-weight: 700;
   display: grid;
   place-items: center;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 12%);
 }
 
 .marca-texto {
@@ -46,7 +51,7 @@
 }
 
 .grupo {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.05rem;
 }
 
 .grupo-titulo {
@@ -54,44 +59,58 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
-  padding: 0 1.25rem 0.45rem;
+  padding: 0 1.25rem 0.42rem;
 }
 
 .enlace {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.55rem 1.25rem;
+  gap: 0.72rem;
+  min-height: 39px;
+  margin: 2px 9px;
+  padding: 0.48rem 0.78rem;
   color: var(--text-on-dark-soft);
   text-decoration: none;
-  font-size: 0.88rem;
-  border-left: 3px solid transparent;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
 .enlace:hover {
-  background: var(--primary);
+  background: rgb(255 255 255 / 7%);
   color: var(--surface);
 }
 
 .enlace.activo {
-  background: var(--primary);
+  background: #1c3656;
   color: var(--surface);
-  border-left-color: var(--primary-200);
+  border-color: rgb(191 219 254 / 16%);
+  box-shadow: inset 2px 0 #8bbbe1;
 }
 
 .enlace-icono {
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  color: #aabdd1;
 }
+
+.enlace.activo .enlace-icono { color: #d4e8f9; }
+.enlace-icono svg { width: 17px; height: 17px; }
+.nav-grupos { padding-bottom: 1rem; }
+
+.mobile-nav-bar { display: none; }
 
 /* --- Contenido --- */
 
 .contenido {
   flex: 1;
   min-width: 0; /* deja que las tablas anchas hagan scroll dentro y no estiren el layout */
-  padding: 2rem;
+  padding: clamp(1.25rem, 2.6vw, 2.25rem);
   max-width: 1400px;
+  background: #f4f7fa;
 }
 
 .contenido:has(.utilidades) {
@@ -119,28 +138,57 @@
 /* --- Colapso a iconos en pantallas estrechas --- */
 
 @media (max-width: 900px) {
-  .sidebar {
-    width: 58px;
-    padding: 1rem 0;
+  .layout { display: block; }
+  .sidebar { display: none; }
+  .mobile-nav-bar {
+    position: sticky;
+    z-index: 30;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 58px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #dce5ed;
+    background: rgb(255 255 255 / 94%);
+    backdrop-filter: blur(12px);
   }
-
-  .marca {
-    justify-content: center;
-    padding: 0 0 1.25rem;
+  .mobile-nav-bar .marca { padding: 0; }
+  .mobile-nav-bar .marca-texto { color: #183650; }
+  .mobile-nav-bar .marca-logo { background: var(--primary); color: white; }
+  .mobile-nav-bar [data-slot='button'] { width: 40px; height: 40px; border-color: #d5e0e8; color: #284a63; }
+  .mobile-navigation-sheet {
+    width: min(88vw, 360px) !important;
+    max-width: 360px !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    border-color: #d9e2ea !important;
+    background: #0f1f3a !important;
+    color: #e1e9f1 !important;
   }
-
-  .marca-texto,
-  .grupo-titulo,
-  .enlace-texto {
-    display: none;
+  .mobile-navigation-sheet [data-slot='sheet-header'] { gap: 8px; padding: 22px 20px 16px; }
+  .mobile-navigation-sheet .marca { margin-bottom: 7px; padding: 0; }
+  .mobile-navigation-sheet .marca-logo { background: #bfdbfe; color: #0f1f3a; }
+  .mobile-navigation-sheet [data-slot='sheet-title'] { color: #f7fafc; font-size: 18px; }
+  .mobile-navigation-sheet [data-slot='sheet-description'] { color: #aebdce; }
+  .mobile-navigation-sheet > [data-slot='button'] {
+    position: absolute;
+    top: 18px;
+    right: 14px;
+    border-color: transparent;
+    background: transparent;
+    color: #dbe6ef;
   }
-
-  .enlace {
-    justify-content: center;
-    padding: 0.65rem 0;
-  }
-
+  .mobile-navigation-sheet > [data-slot='button']:hover { background: rgb(255 255 255 / 9%); color: #fff; }
+  .mobile-navigation-sheet .nav-grupos { height: 100%; overflow-y: auto; padding: 0 0 18px; }
+  .mobile-navigation-sheet .grupo { margin-bottom: 10px; }
+  .mobile-navigation-sheet .grupo-titulo { padding: 0 20px 6px; }
+  .mobile-navigation-sheet .enlace { min-height: 42px; margin-inline: 9px; padding-inline: 11px; font-size: 13px; }
   .contenido {
-    padding: 1.25rem;
+    padding: 18px 14px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enlace { transition: none; }
 }
