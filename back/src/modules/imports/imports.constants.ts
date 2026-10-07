@@ -84,6 +84,7 @@ export const REQUIRED_COLUMNS: BusinessColumn[] = ['expediente', 'nombre'];
 export const IMPORT_KIND = 'supercias_companias';
 export const IMPORT_KIND_CATALOGO = 'catalogo_cuentas';
 export const IMPORT_KIND_CIIU = 'catalogo_ciiu';
+export const IMPORT_KIND_COEFICIENTES = 'coeficientes_sri';
 
 /**
  * Fracción máxima de filas vigentes que un archivo puede dejar fuera antes de

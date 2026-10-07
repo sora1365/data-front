@@ -14,14 +14,20 @@ import { CatastrosImportService } from './catastros/catastros-import.service';
 import { WebImportService } from './web/web-import.service';
 import { ImportJob } from './entities/import-job.entity';
 import { ImportRowReject } from './entities/import-row-reject.entity';
+import { OperationPreview } from './entities/operation-preview.entity';
 import { BalancesModule } from '../balances/balances.module';
+import { OperationsController } from './operations.controller';
+import { OperationsService } from './operations.service';
 
 @Module({
   // BalancesModule entra por `PercentilesService`: al terminar un import de
   // balances hay que rehacer los percentiles sectoriales, o quedan calculados
   // contra una población que ya cambió.
-  imports: [TypeOrmModule.forFeature([ImportJob, ImportRowReject]), BalancesModule],
-  controllers: [ImportsController],
+  imports: [
+    TypeOrmModule.forFeature([ImportJob, ImportRowReject, OperationPreview]),
+    BalancesModule,
+  ],
+  controllers: [ImportsController, OperationsController],
   providers: [
     ImportJobsService,
     ImportRecoveryService,
@@ -34,6 +40,7 @@ import { BalancesModule } from '../balances/balances.module';
     TurismoImportService,
     CatastrosImportService,
     WebImportService,
+    OperationsService,
   ],
 })
 export class ImportsModule {}

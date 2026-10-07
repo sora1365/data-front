@@ -19,6 +19,7 @@ import ImportarCatastros from './pages/ImportarCatastros'
 import Importaciones from './pages/Importaciones'
 import Segmentos from './pages/Segmentos'
 import Scraping from './pages/Scraping'
+import Utilidades from './pages/Utilidades'
 import { RUTA_INICIAL } from './routes'
 import './App.css'
 
@@ -66,6 +67,7 @@ function App() {
           <Route path="/importar/turismo" element={<ImportarTurismo />} />
           <Route path="/importar/catastros" element={<ImportarCatastros />} />
           <Route path="/importaciones" element={<Importaciones />} />
+          <Route path="/utilidades" element={<Utilidades />} />
           {/* Redirección de la ruta antigua, que estaba en el menú anterior. */}
           <Route path="/importar" element={<Navigate to="/importar/companias" replace />} />
           <Route path="*" element={<Navigate to={RUTA_INICIAL} replace />} />

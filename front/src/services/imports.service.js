@@ -44,6 +44,7 @@ export const KIND_BALANCES = 'supercias_balances'
 export const KIND_SRI = 'sri_padron'
 export const KIND_TURISMO = 'catastro_turismo'
 export const KIND_CATASTROS = 'catastros_sri'
+export const KIND_COEFICIENTES = 'coeficientes_sri'
 
 export const ETIQUETA_KIND = {
   [KIND_COMPANIAS]: 'Compañías',
@@ -53,4 +54,5 @@ export const ETIQUETA_KIND = {
   [KIND_SRI]: 'Padrón del SRI',
   [KIND_TURISMO]: 'Catastro de turismo',
   [KIND_CATASTROS]: 'Catastros del SRI',
+  [KIND_COEFICIENTES]: 'Coeficientes presuntivos SRI',
 }
