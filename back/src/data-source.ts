@@ -21,6 +21,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'app_db',
   entities: [join(__dirname, 'modules', '**', '*.entity{.ts,.js}')],
   migrations: [join(__dirname, 'database', 'migrations', '*{.ts,.js}')],
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   synchronize: false,
 });
 // Sin `export default`: el CLI de TypeORM exige que el archivo exporte
