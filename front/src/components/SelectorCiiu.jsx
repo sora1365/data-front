@@ -22,7 +22,7 @@ const MAX_SUGERENCIAS = 40
  * @param value    código CIIU seleccionado, o '' si no hay ninguno
  * @param onChange recibe el código elegido (o '' al limpiar)
  */
-export default function SelectorCiiu({ value, onChange }) {
+export default function SelectorCiiu({ value, onChange, inputId, labelledBy }) {
   const [texto, setTexto] = useState('')
   const [sugerencias, setSugerencias] = useState([])
   const [abierto, setAbierto] = useState(false)
@@ -117,7 +117,7 @@ export default function SelectorCiiu({ value, onChange }) {
 
   if (seleccionada) {
     return (
-      <div className="selector-ciiu elegido" title={seleccionada.nombre ?? seleccionada.codigo}>
+      <div className="selector-ciiu elegido" title={seleccionada.nombre ?? seleccionada.codigo} role="group" aria-labelledby={labelledBy}>
         <span className="codigo">{seleccionada.codigo}</span>
         <span className="nombre">{seleccionada.nombre ?? 'código no encontrado en el catálogo'}</span>
         <button type="button" onClick={limpiar} aria-label="Quitar filtro de actividad">
@@ -130,6 +130,18 @@ export default function SelectorCiiu({ value, onChange }) {
   return (
     <div className="selector-ciiu" ref={caja}>
       <input
+        id={inputId}
+        name="ciiu"
+        type="search"
+        autoComplete="off"
+        spellCheck={false}
+        role="combobox"
+        aria-label={labelledBy ? undefined : 'Actividad económica (CIIU)'}
+        aria-labelledby={labelledBy}
+        aria-autocomplete="list"
+        aria-expanded={abierto}
+        aria-controls="selector-ciiu-opciones"
+        aria-activedescendant={abierto && resaltada >= 0 ? `selector-ciiu-opcion-${resaltada}` : undefined}
         placeholder="Actividad económica (CIIU)…"
         value={texto}
         onChange={e => {
@@ -141,16 +153,19 @@ export default function SelectorCiiu({ value, onChange }) {
       />
 
       {abierto && (
-        <ul className="sugerencias">
-          {cargando && <li className="info">Buscando…</li>}
+        <ul className="sugerencias" id="selector-ciiu-opciones" role="listbox" aria-label="Actividades económicas sugeridas">
+          {cargando && <li className="info" role="status" aria-live="polite">Buscando actividades…</li>}
           {!cargando && sugerencias.length === 0 && (
-            <li className="info">
+            <li className="info" role="status" aria-live="polite">
               {texto ? 'Ninguna actividad coincide' : 'Escribe un código o parte del nombre'}
             </li>
           )}
           {sugerencias.map((a, i) => (
             <li
               key={a.codigo}
+              id={`selector-ciiu-opcion-${i}`}
+              role="option"
+              aria-selected={i === resaltada}
               className={i === resaltada ? 'activa' : undefined}
               onMouseEnter={() => setResaltada(i)}
               onMouseDown={e => e.preventDefault()} // evita perder el foco antes del click
@@ -161,7 +176,7 @@ export default function SelectorCiiu({ value, onChange }) {
             </li>
           ))}
           {sugerencias.length === MAX_SUGERENCIAS && (
-            <li className="info">Sólo se muestran las primeras {MAX_SUGERENCIAS}. Afina la búsqueda.</li>
+            <li className="info" role="status">Sólo se muestran las primeras {MAX_SUGERENCIAS}. Afina la búsqueda.</li>
           )}
         </ul>
       )}

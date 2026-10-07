@@ -530,3 +530,118 @@
 .tributario .etiqueta.apagado {
   color: var(--text-muted);
 }
+
+/* Friday / shadcn workspace */
+.tributario {
+  --tax-navy: #1e3a5f;
+  --tax-line: #dbe4ee;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1rem;
+  color: var(--foreground);
+}
+.tributario-hero, .tributario-title-row, .tributario-filter-heading, .tributario-section-header { display: flex; align-items: center; }
+.tributario-hero { justify-content: space-between; gap: 1rem; }
+.tributario-title-row { gap: 0.9rem; }
+.tributario-hero-icon, .tributario-section-icon { display: grid; flex: 0 0 auto; place-items: center; color: var(--tax-navy); background: #e8eff8; }
+.tributario-hero-icon { width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; }
+.tributario-eyebrow { margin: 0 0 0.2rem; color: #64748b; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.13em; }
+.tributario-hero h1 { margin: 0; color: var(--tax-navy); font-size: clamp(1.5rem, 2vw, 1.85rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.15; }
+.tributario-intro { margin: 0.32rem 0 0; color: #64748b; font-size: 0.88rem; }
+.tributario .vistas { display: flex; gap: 0.2rem; overflow-x: auto; margin: 0; padding: 0 0.2rem; border-bottom: 1px solid #dce5ed; scrollbar-width: thin; }
+.tributario .vistas button { min-height: 3rem; flex: 0 0 auto; padding: 0.65rem 0.9rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #64748b; font: inherit; font-size: 0.8rem; font-weight: 550; white-space: nowrap; transition: color 140ms ease, border-color 140ms ease; }
+.tributario .vistas button:hover { color: var(--tax-navy); }
+.tributario .vistas button:focus-visible { border-radius: 0.35rem; outline: 2px solid #3b82f6; outline-offset: -3px; }
+.tributario .vistas button.activa { border-bottom-color: var(--tax-navy); color: var(--tax-navy); font-weight: 650; }
+.tributario-panel { display: flex; min-width: 0; flex-direction: column; gap: 0.9rem; }
+.tributario-nota { border-color: #e9d6a0; border-radius: 0.7rem; background: #fffbeb; color: #78350f; }
+.tributario-nota [data-slot="alert-title"] { font-size: 0.83rem; }
+.tributario-nota [data-slot="alert-description"] { margin-top: 0.1rem; color: #854d0e; font-size: 0.78rem; line-height: 1.55; }
+.tributario-panorama-card, .tributario-filtros-card, .tributario-resultados-card { min-width: 0; border-radius: 0.9rem; background: #fff; box-shadow: 0 2px 8px rgb(30 58 95 / 0.035), 0 1px 2px rgb(30 58 95 / 0.04); }
+.tributario-section-header { flex-direction: row; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #edf1f6; padding-bottom: 0.9rem; }
+.tributario-section-header [data-slot="card-title"] { color: #1e293b; font-size: 0.96rem; font-weight: 650; }
+.tributario-section-header [data-slot="card-description"] { margin-top: 0.18rem; color: #64748b; font-size: 0.78rem; }
+.tributario-section-header [data-slot="card-action"] { position: static; grid-column: auto; grid-row: auto; }
+.tributario-filter-heading { gap: 0.7rem; }
+.tributario-section-icon { width: 2rem; height: 2rem; border-radius: 0.6rem; }
+.tributario-panorama-card [data-slot="card-content"], .tributario-filtros-card [data-slot="card-content"] { padding-top: 0.9rem; }
+.tributario .panorama { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.65rem; margin: 0; }
+.tributario .tarjeta { min-width: 0; padding: 0.8rem; border-color: #e5ebf2; border-radius: 0.65rem; background: #fff; }
+.tributario .tarjeta.destacada { border-color: #e9d6a0; background: #fffbeb; }
+.tributario .tarjeta .anio { color: #64748b; font-weight: 650; }
+.tributario .tarjeta .cifra { margin-top: 0.12rem; color: #1e293b; font-size: 1.28rem; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+.tributario .tarjeta .pie { color: #64748b; }
+.tributario .tarjeta .reparto { gap: 0.3rem 0.5rem; color: #64748b; }
+.tributario .tarjeta .manda { color: #92400e; font-weight: 600; }
+.tributario-filter-content { padding-top: 0.9rem; }
+.tributario .filtros { display: flex; flex-direction: column; align-items: stretch; gap: 0.9rem; margin: 0; }
+.tributario .poblaciones { display: flex; flex-wrap: wrap; gap: 0.4rem; overflow: visible; border: 0; }
+.tributario .poblaciones button { min-height: 2.25rem; padding: 0.45rem 0.72rem; border: 1px solid var(--tax-line); border-radius: 0.55rem; background: #fff; color: #475569; font-size: 0.76rem; font-weight: 550; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease; }
+.tributario .poblaciones button + button { border-left: 1px solid var(--tax-line); }
+.tributario .poblaciones button:hover { background: #f8fafc; }
+.tributario .poblaciones button.activa { border-color: #9bb5d2; background: #edf4fb; color: var(--tax-navy); box-shadow: inset 0 0 0 1px #9bb5d2; }
+.tributario .poblaciones button:focus-visible { outline: 3px solid rgb(59 130 246 / 0.2); outline-offset: 1px; }
+.tributario-filtros-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem 1rem; }
+.tributario-filtros-grid [data-slot="field"] { min-width: 0; gap: 0.4rem; }
+.tributario-filtros-grid [data-slot="field-label"] { color: #475569; font-size: 0.74rem; font-weight: 600; }
+.tributario-filtros-grid input, .tributario-filtros-grid select { width: 100%; min-width: 0; height: 2.4rem; padding: 0 0.65rem; border: 1px solid var(--tax-line); border-radius: 0.55rem; background: #fff; color: #1e293b; font: inherit; font-size: 0.78rem; outline: none; }
+.tributario-filtros-grid input:focus-visible, .tributario-filtros-grid select:focus-visible { border-color: #3b82f6; box-shadow: 0 0 0 3px rgb(59 130 246 / 0.13); }
+.tributario-error { border-radius: 0.7rem; }
+.tributario-error [data-slot="alert-title"] { font-size: 0.83rem; }
+.tributario-error [data-slot="alert-description"] { margin-top: 0.1rem; font-size: 0.8rem; }
+.tributario .ayuda { margin: 0; padding: 0.7rem 0.85rem; border: 1px solid #e5ebf2; border-radius: 0.65rem; background: #f8fafc; color: #64748b; font-size: 0.76rem; line-height: 1.5; }
+.tributario .ayuda strong { color: #334155; }
+.tributario-resultados-card { overflow: hidden; }
+.tributario-count { color: #475569; font-variant-numeric: tabular-nums; }
+.tributario-results-content { min-width: 0; padding-bottom: 1rem; }
+.tributario-tabla-scroll { width: 100%; max-width: 100%; overflow: auto; border: 1px solid #e7edf4; border-radius: 0.65rem; scrollbar-color: #cbd5e1 transparent; scrollbar-width: thin; }
+.tributario-tabla-scroll:focus-visible { outline: 3px solid rgb(59 130 246 / 0.3); outline-offset: 2px; }
+.tributario .tabla { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; font-size: 0.76rem; }
+.tributario .tabla th, .tributario .tabla td { padding: 0.62rem 0.7rem; border-bottom: 1px solid #edf1f6; vertical-align: middle; }
+.tributario .tabla th { position: sticky; z-index: 1; top: 0; background: #f7f9fc; color: #475569; font-size: 0.67rem; font-weight: 650; white-space: nowrap; }
+.tributario .tabla tbody tr { transition: background-color 120ms ease; }
+.tributario .tabla tbody tr:hover { background: #f8fafc; cursor: default; }
+.tributario .tabla tbody tr:last-child td { border-bottom: 0; }
+.tributario .tabla .nombre { min-width: 16rem; color: #1e293b; font-weight: 600; }
+.tributario .tabla .nombre .ruc { margin-top: 0.18rem; color: #64748b; font-weight: 400; }
+.tributario .tabla td.num, .tributario .tabla th.num { font-variant-numeric: tabular-nums; }
+.tributario .tabla .brecha { color: #9a4f1e; font-weight: 650; }
+.tributario .tabla .percentil.alto { color: #a33138; }
+.tributario .tabla .percentil.medio { color: #9a6700; }
+.tributario .tabla .persist.p3 { color: #9a6700; }
+.tributario .tabla .persist.p4 { color: #a33138; }
+.tributario .tabla .vacio { min-width: 30rem; padding: 2rem; color: #64748b; text-align: center; }
+.tributario-row-action { text-align: right !important; }
+.tributario-row-action [data-slot="button"] { font-size: 0.73rem; }
+.tributario .paginacion { justify-content: flex-end; gap: 0.45rem; margin-top: 0.8rem; }
+.tributario [data-slot="button"] { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.tributario .modal { z-index: 60; padding: 1.5rem; background: rgb(15 31 58 / 0.52); backdrop-filter: blur(3px); }
+.tributario .ficha { overflow: hidden; border: 1px solid #e5ebf2; border-radius: 0.9rem; }
+.tributario .ficha h3 { color: #1e293b; font-size: 1.1rem; }
+.tributario .ficha .sub { color: #64748b; }
+.tributario .ficha .cerrar { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 0.5rem; }
+.tributario .ficha .cerrar:hover { background: #f1f5f9; color: #1e293b; }
+.tributario .ficha .informe-link { border-radius: 0.5rem; background: var(--tax-navy); }
+.tributario .ficha .fuente { line-height: 1.5; }
+.contenido .tributario .vistas { width: 100%; max-width: 100%; gap: 0.2rem; overflow-x: auto; padding: 0 0.2rem; border: 0; border-bottom: 1px solid #dce5ed; border-radius: 0; background: transparent; }
+.contenido .tributario .vistas button { min-height: 3rem; padding: 0.65rem 0.9rem; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; box-shadow: none; color: #64748b; font-size: 0.8rem; font-weight: 550; }
+.contenido .tributario .vistas button:hover { background: transparent; color: var(--tax-navy); }
+.contenido .tributario .vistas button.activa { border: 0; border-bottom: 2px solid var(--tax-navy); border-radius: 0; background: transparent; box-shadow: none; color: var(--tax-navy); font-weight: 650; }
+@media (max-width: 900px) { .tributario-filtros-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) {
+  .tributario { gap: 0.85rem; }
+  .tributario .vistas { margin-inline: -0.15rem; }
+  .tributario .panorama { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tributario-section-header { align-items: flex-start; }
+  .tributario .filtros { gap: 0.7rem; }
+  .tributario-filtros-grid { grid-template-columns: 1fr; }
+  .tributario .poblaciones button { flex: 1 1 9rem; }
+  .tributario .modal { align-items: flex-start; padding: 0.5rem; }
+  .tributario .ficha { padding: 1rem; }
+  .tributario .ficha .informe-link { position: static; display: inline-block; margin-bottom: 0.8rem; }
+  .tributario .ficha .cerrar { top: 0.7rem; right: 0.7rem; }
+}
+@media (max-width: 420px) { .tributario .panorama { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .tributario *, .tributario *::before, .tributario *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; } }

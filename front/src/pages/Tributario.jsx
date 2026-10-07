@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowUpRight, Calculator, LoaderCircle, Search } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import {
   listarRiesgo,
   obtenerFichaTributaria,
@@ -43,25 +50,23 @@ const POBLACIONES = [
   { id: 'sin_ingresos', titulo: 'Sin ingresos', ayuda: 'Sin ingresos ordinarios pero con activos: la presunción sale entera del coeficiente de activos.' },
 ]
 
+const FILTROS_INICIALES = {
+  anio: '',
+  poblacion: 'comparable',
+  persistencia: '',
+  rama: '',
+  q: '',
+  brechaMinima: '100000',
+  orden: 'percentil',
+}
+
 /** El decil alto es el corte que separa patrón de ruido, y se marca en pantalla. */
 const claseP = p => (p === null || p === undefined ? '' : p >= 0.9 ? 'alto' : p >= 0.75 ? 'medio' : '')
 
 export default function Tributario() {
   const [vista, setVista] = useState('presuntiva')
   const [resumen, setResumen] = useState(null)
-  const [filtros, setFiltros] = useState({
-    anio: '',
-    poblacion: 'comparable',
-    persistencia: '',
-    rama: '',
-    q: '',
-    // Un mínimo por defecto, y no "sin mínimo": el percentil coloca arriba a
-    // compañías atípicas dentro de su rama que arrastran brechas de cientos de
-    // dólares. Son ciertas y son irrelevantes; abrir la pantalla con ellas en
-    // cabeza da una primera impresión falsa de la herramienta.
-    brechaMinima: '100000',
-    orden: 'percentil',
-  })
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES)
   const [datos, setDatos] = useState([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -114,16 +119,41 @@ export default function Tributario() {
 
   const cambiar = (campo, valor) => setFiltros(f => ({ ...f, [campo]: valor }))
   const poblacionActual = POBLACIONES.find(p => p.id === filtros.poblacion)
+  const navegarPestanas = (event, index) => {
+    const next = event.key === 'ArrowRight' ? (index + 1) % VISTAS.length
+      : event.key === 'ArrowLeft' ? (index - 1 + VISTAS.length) % VISTAS.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? VISTAS.length - 1 : null
+    if (next === null) return
+    event.preventDefault()
+    setVista(VISTAS[next].id)
+    document.getElementById(`tributario-tab-${VISTAS[next].id}`)?.focus()
+  }
 
   return (
-    <div className="tributario">
-      <h2>Análisis tributario</h2>
+    <main className="tributario">
+      <header className="tributario-hero">
+        <div className="tributario-title-row">
+          <span className="tributario-hero-icon" aria-hidden="true"><Calculator size={20} /></span>
+          <div>
+            <p className="tributario-eyebrow">LECTURA TRIBUTARIA</p>
+            <h1>Análisis tributario</h1>
+            <p className="tributario-intro">Explora exposición presuntiva, utilidades no distribuidas y crédito tributario.</p>
+          </div>
+        </div>
+      </header>
 
-      <div className="vistas">
-        {VISTAS.map(v => (
+      <div className="vistas" role="tablist" aria-label="Herramientas tributarias">
+        {VISTAS.map((v, index) => (
           <button
             key={v.id}
+            type="button"
+            role="tab"
+            id={`tributario-tab-${v.id}`}
+            aria-controls="tributario-panel"
+            aria-selected={vista === v.id}
+            tabIndex={vista === v.id ? 0 : -1}
             className={vista === v.id ? 'activa' : ''}
+            onKeyDown={event => navegarPestanas(event, index)}
             onClick={() => setVista(v.id)}
           >
             {v.titulo}
@@ -132,21 +162,21 @@ export default function Tributario() {
       </div>
 
       {vista === 'no-distribuidas' ? (
-        <UtilidadesNoDistribuidas />
+        <div role="tabpanel" id="tributario-panel" aria-labelledby={`tributario-tab-${vista}`}><UtilidadesNoDistribuidas /></div>
       ) : vista === 'credito' ? (
-        <CreditoTributario />
+        <div role="tabpanel" id="tributario-panel" aria-labelledby={`tributario-tab-${vista}`}><CreditoTributario /></div>
       ) : (
         <>
-      <p className="nota">
-        Aplica los coeficientes del SRI (art. 4: se calcula sobre ingresos, sobre costos y gastos y
-        sobre activos, y manda <strong>el mayor de los tres</strong>) y compara esa base con la
-        utilidad del balance. Mide <strong>exposición, no deuda</strong>: la estimación presuntiva
-        sólo procede cuando la contabilidad no permite determinar la base de forma directa. La base
-        declarada es contable, no fiscal —no incluye la conciliación tributaria—. RIMPE queda fuera.
-      </p>
+      <div role="tabpanel" id="tributario-panel" aria-labelledby={`tributario-tab-${vista}`} className="tributario-panel">
+      <Alert className="tributario-nota">
+        <AlertTitle>Alcance de la estimación presuntiva</AlertTitle>
+        <AlertDescription>Aplica los coeficientes del SRI (art. 4: se calcula sobre ingresos, sobre costos y gastos y sobre activos, y manda <strong>el mayor de los tres</strong>) y compara esa base con la utilidad del balance. Mide <strong>exposición, no deuda</strong>: la estimación presuntiva sólo procede cuando la contabilidad no permite determinar la base de forma directa. La base declarada es contable, no fiscal —no incluye la conciliación tributaria—. RIMPE queda fuera.</AlertDescription>
+      </Alert>
 
       {resumen && (
-        <div className="panorama">
+        <Card className="tributario-panorama-card">
+        <CardHeader className="tributario-section-header"><div><CardTitle>Panorama de la población</CardTitle><CardDescription>Balances por ejercicio, grupo de comparación y base que más pesa.</CardDescription></div></CardHeader>
+        <CardContent><div className="panorama">
           {resumen.porAnio.map(a => (
             <div key={a.anio} className="tarjeta">
               <div className="anio">{a.anio}</div>
@@ -173,14 +203,23 @@ export default function Tributario() {
               </div>
             </div>
           )}
-        </div>
+        </div></CardContent>
+        </Card>
       )}
 
-      <div className="filtros">
-        <div className="poblaciones">
+      <Card className="tributario-filtros-card">
+      <CardHeader className="tributario-section-header">
+        <div className="tributario-filter-heading"><span className="tributario-section-icon" aria-hidden="true"><Search size={16} /></span><div><CardTitle>Filtros del ranking</CardTitle><CardDescription>Define qué compañías y ejercicios quieres comparar.</CardDescription></div></div>
+        <CardAction><Button type="button" variant="ghost" size="sm" onClick={() => setFiltros(FILTROS_INICIALES)} disabled={Object.keys(FILTROS_INICIALES).every(k => filtros[k] === FILTROS_INICIALES[k])}>Restablecer</Button></CardAction>
+      </CardHeader>
+      <CardContent className="tributario-filter-content">
+        <div className="filtros">
+        <div className="poblaciones" role="group" aria-label="Población de compañías">
           {POBLACIONES.map(p => (
             <button
               key={p.id}
+              type="button"
+              aria-pressed={filtros.poblacion === p.id}
               className={filtros.poblacion === p.id ? 'activa' : ''}
               onClick={() => cambiar('poblacion', p.id)}
             >
@@ -189,86 +228,48 @@ export default function Tributario() {
           ))}
         </div>
 
-        <input
-          type="search"
-          placeholder="Nombre, RUC o expediente"
-          value={filtros.q}
-          onChange={e => cambiar('q', e.target.value)}
-        />
-
-        <select value={filtros.anio} onChange={e => cambiar('anio', e.target.value)}>
-          <option value="">Último ejercicio de cada una</option>
-          {resumen?.porAnio.map(a => (
-            <option key={a.anio} value={a.anio}>
-              Ejercicio {a.anio}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filtros.persistencia}
-          onChange={e => cambiar('persistencia', e.target.value)}
-        >
-          <option value="">Cualquier persistencia</option>
-          <option value="1">1+ ejercicios en el decil alto</option>
-          <option value="2">2+ ejercicios</option>
-          <option value="3">3+ ejercicios</option>
-          <option value="4">Los 4 ejercicios</option>
-        </select>
-
-        <input
-          type="text"
-          className="rama"
-          placeholder="Rama (C, H52, H522)"
-          value={filtros.rama}
-          onChange={e => cambiar('rama', e.target.value)}
-        />
-
-        <select
-          value={filtros.brechaMinima}
-          onChange={e => cambiar('brechaMinima', e.target.value)}
-        >
-          <option value="">Sin mínimo de brecha</option>
-          <option value="10000">Brecha ≥ 10 mil</option>
-          <option value="100000">Brecha ≥ 100 mil</option>
-          <option value="1000000">Brecha ≥ 1 millón</option>
-          <option value="10000000">Brecha ≥ 10 millones</option>
-        </select>
-
-        <select value={filtros.orden} onChange={e => cambiar('orden', e.target.value)}>
-          <option value="percentil">Ordenar por percentil sectorial</option>
-          <option value="brecha">Ordenar por brecha del año</option>
-          <option value="brecha_total">Ordenar por brecha acumulada</option>
-        </select>
+        <FieldGroup className="tributario-filtros-grid">
+          <Field><FieldLabel htmlFor="tributario-q">Nombre, RUC o expediente</FieldLabel><Input id="tributario-q" name="q" type="search" placeholder="Buscar compañía…" value={filtros.q} onChange={e => cambiar('q', e.target.value)} /></Field>
+          <Field><FieldLabel htmlFor="tributario-anio">Ejercicio</FieldLabel><select id="tributario-anio" name="anio" value={filtros.anio} onChange={e => cambiar('anio', e.target.value)}><option value="">Último ejercicio de cada una</option>{resumen?.porAnio.map(a => <option key={a.anio} value={a.anio}>Ejercicio {a.anio}</option>)}</select></Field>
+          <Field><FieldLabel htmlFor="tributario-persistencia">Persistencia</FieldLabel><select id="tributario-persistencia" name="persistencia" value={filtros.persistencia} onChange={e => cambiar('persistencia', e.target.value)}><option value="">Cualquier persistencia</option><option value="1">1+ ejercicios en el decil alto</option><option value="2">2+ ejercicios</option><option value="3">3+ ejercicios</option><option value="4">Los 4 ejercicios</option></select></Field>
+          <Field><FieldLabel htmlFor="tributario-rama">Rama de actividad</FieldLabel><Input id="tributario-rama" name="rama" placeholder="C, H52, H522" value={filtros.rama} onChange={e => cambiar('rama', e.target.value)} /></Field>
+          <Field><FieldLabel htmlFor="tributario-brecha">Brecha mínima</FieldLabel><select id="tributario-brecha" name="brechaMinima" value={filtros.brechaMinima} onChange={e => cambiar('brechaMinima', e.target.value)}><option value="">Sin mínimo de brecha</option><option value="10000">Brecha ≥ 10 mil</option><option value="100000">Brecha ≥ 100 mil</option><option value="1000000">Brecha ≥ 1 millón</option><option value="10000000">Brecha ≥ 10 millones</option></select></Field>
+          <Field><FieldLabel htmlFor="tributario-orden">Ordenar por</FieldLabel><select id="tributario-orden" name="orden" value={filtros.orden} onChange={e => cambiar('orden', e.target.value)}><option value="percentil">Percentil sectorial</option><option value="brecha">Brecha del año</option><option value="brecha_total">Brecha acumulada</option></select></Field>
+        </FieldGroup>
       </div>
+      </CardContent>
+      </Card>
 
-      <p className="ayuda">{poblacionActual?.ayuda}</p>
-      {error && <p className="error">{error}</p>}
+      {poblacionActual && <p className="ayuda"><strong>{poblacionActual.titulo}:</strong> {poblacionActual.ayuda}</p>}
+      {error && <Alert variant="destructive" className="tributario-error"><AlertTitle>No se pudo cargar la información</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
-      <div className="resultado">
-        {dinero(total)} compañías · mostrando {offset + 1}–{Math.min(offset + LIMIT, total)}
-        {cargando && <span className="cargando"> · cargando…</span>}
-      </div>
-
+      <Card className="tributario-resultados-card">
+      <CardHeader className="tributario-section-header">
+        <div><CardTitle>Ranking de compañías</CardTitle><CardDescription aria-live="polite">{cargando ? 'Actualizando resultados…' : `${dinero(total)} compañías · mostrando ${total ? offset + 1 : 0}–${Math.min(offset + LIMIT, total)}`}</CardDescription></div>
+        <Badge variant="outline" className="tributario-count">{dinero(total)} resultados</Badge>
+      </CardHeader>
+      <CardContent className="tributario-results-content">
+      <div className="tributario-tabla-scroll" role="region" aria-label="Ranking tributario" tabIndex={0}>
       <table className="tabla">
         <thead>
           <tr>
-            <th>Compañía</th>
-            <th>Rama</th>
-            <th className="num">Año</th>
-            <th className="num">Percentil</th>
-            <th>Manda</th>
-            <th className="num">Declarado</th>
-            <th className="num">Base presunta</th>
-            <th className="num">Brecha</th>
-            <th className="num" title="Ejercicios en el decil alto de su rama">
+            <th scope="col">Compañía</th>
+            <th scope="col">Rama</th>
+            <th scope="col" className="num">Año</th>
+            <th scope="col" className="num">Percentil</th>
+            <th scope="col">Base principal</th>
+            <th scope="col" className="num">Declarado</th>
+            <th scope="col" className="num">Base presunta</th>
+            <th scope="col" className="num">Brecha</th>
+            <th scope="col" className="num" title="Ejercicios en el decil alto de su rama">
               Persist.
             </th>
+            <th scope="col"><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
           {datos.map(d => (
-            <tr key={`${d.expediente}-${d.anio}`} onClick={() => abrirFicha(d.expediente)}>
+            <tr key={`${d.expediente}-${d.anio}`}>
               <td className="nombre">
                 {d.nombre}
                 <span className="ruc">{d.ruc}</span>
@@ -288,28 +289,33 @@ export default function Tributario() {
               <td className="num">{dinero(d.base_presunta)}</td>
               <td className="num brecha">{dinero(d.brecha)}</td>
               <td className={`num persist p${d.anios_decil_alto}`}>{d.anios_decil_alto}</td>
+              <td className="tributario-row-action"><Button type="button" variant="outline" size="sm" onClick={() => abrirFicha(d.expediente)}>Ficha <ArrowUpRight data-icon="inline-end" aria-hidden="true" /></Button></td>
             </tr>
           ))}
           {!cargando && datos.length === 0 && (
             <tr>
-              <td colSpan={9} className="vacio">
+              <td colSpan={10} className="vacio">
                 Ninguna compañía con esos filtros.
               </td>
             </tr>
           )}
         </tbody>
       </table>
+      </div>
 
       <div className="paginacion">
-        <button disabled={offset === 0} onClick={() => buscar(filtros, Math.max(0, offset - LIMIT))}>
+        <Button variant="outline" size="sm" disabled={offset === 0 || cargando} onClick={() => buscar(filtros, Math.max(0, offset - LIMIT))}>
           ← Anterior
-        </button>
-        <button
+        </Button>
+        <Button variant="outline" size="sm"
           disabled={offset + LIMIT >= total}
           onClick={() => buscar(filtros, offset + LIMIT)}
         >
           Siguiente →
-        </button>
+        </Button>
+      </div>
+      </CardContent>
+      </Card>
       </div>
 
       {ficha && (
@@ -497,6 +503,6 @@ export default function Tributario() {
       )}
         </>
       )}
-    </div>
+    </main>
   )
 }

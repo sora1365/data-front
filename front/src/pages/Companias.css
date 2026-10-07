@@ -1,191 +1,144 @@
-.companias h2 {
-  margin-bottom: 1rem;
-}
-
-.filtros {
+.companias {
+  --company-navy: #1e3a5f;
+  --company-canvas: #f4f7fa;
+  --company-line: #dbe4ee;
+  --company-blue: #3b82f6;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: var(--foreground);
 }
 
-.filtros input,
-.filtros select,
-.filtros button {
-  padding: 0.45rem 0.7rem;
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.filtros input {
-  min-width: 200px;
-}
-
-.filtros button {
-  background: var(--container-bg);
-  cursor: pointer;
-}
-
-.resumen {
-  margin: 0.9rem 0;
-  font-size: 0.85rem;
-  color: var(--text-soft);
-}
-
-/* La tabla es ancha: debe desplazarse dentro de su caja y nunca desplazar la página. */
-.tabla-scroll {
-  overflow-x: auto;
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-}
-
-.companias table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-.companias th,
-.companias td {
-  text-align: left;
-  padding: 0.55rem 0.7rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.companias thead th {
-  background: var(--surface-alt);
-  position: sticky;
-  top: 0;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.companias td.der,
-.companias th.der {
-  text-align: right;
-}
-
-.companias .mono {
-  font-family: Consolas, Menlo, monospace;
-}
-
-/* El nombre de la actividad puede ser muy largo. Se envuelve en varias líneas
-   en vez de recortarse con puntos suspensivos: es el dato por el que se filtra,
-   así que leerlo entero importa más que mantener la fila de una sola altura.
-   La tabla es `nowrap`, de ahí el `white-space: normal` explícito. */
-.companias td.actividad {
-  max-width: 280px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.companias .tenue {
-  color: var(--text-muted);
-}
-
-.companias .vacio {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 2rem;
-}
-
-.paginacion {
+.companias-hero,
+.companias-titulo,
+.companias-card-heading,
+.companias-resultados-header,
+.companias-paginacion,
+.companias-pagina-acciones {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1rem;
-  font-size: 0.85rem;
 }
 
-.paginacion button {
-  padding: 0.45rem 0.9rem;
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
+.companias-hero { justify-content: space-between; gap: 1rem; }
+.companias-titulo { gap: 0.9rem; }
+.companias-icono,
+.companias-section-icon,
+.companias-vacio-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--company-navy);
+  background: #e8eff8;
 }
+.companias-icono { width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; }
+.companias-eyebrow { margin: 0 0 0.2rem; color: #64748b; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.13em; }
+.companias-hero h1 { margin: 0; color: var(--company-navy); font-size: clamp(1.5rem, 2vw, 1.85rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.15; }
+.companias-intro { margin: 0.32rem 0 0; color: #64748b; font-size: 0.88rem; }
+.companias-total { min-height: 2rem; gap: 0.4rem; border-color: #d7e2f0; background: #fff; color: var(--company-navy); font-variant-numeric: tabular-nums; }
+.companias-total svg { width: 0.9rem; height: 0.9rem; }
 
-.paginacion button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.companias-filtros-card,
+.companias-resultados-card { border-radius: 0.9rem; background: #fff; box-shadow: 0 2px 8px rgb(30 58 95 / 0.035), 0 1px 2px rgb(30 58 95 / 0.04); }
+.companias-card-header { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #edf1f6; padding-bottom: 1rem; }
+.companias-card-heading { gap: 0.7rem; }
+.companias-section-icon { width: 2rem; height: 2rem; border-radius: 0.6rem; }
+.companias-card-header [data-slot="card-title"],
+.companias-resultados-header [data-slot="card-title"] { color: #1e293b; font-size: 0.96rem; font-weight: 650; }
+.companias-card-header [data-slot="card-description"],
+.companias-resultados-header [data-slot="card-description"] { margin-top: 0.18rem; color: #64748b; font-size: 0.78rem; }
+.companias-card-header [data-slot="card-action"] { position: static; grid-column: auto; grid-row: auto; }
+.companias-filtros-card [data-slot="card-content"] { padding-top: 1rem; }
+.companias-filtros-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem 1.15rem; }
+.companias-filtros-grid [data-slot="field"] { min-width: 0; gap: 0.42rem; }
+.companias-filtros-grid [data-slot="field-label"] { color: #475569; font-size: 0.76rem; font-weight: 600; }
+.companias-filtros-grid input,
+.companias-filtros-grid select {
+  width: 100%; min-width: 0; height: 2.45rem; border: 1px solid var(--company-line); border-radius: 0.55rem; background-color: #fff; color: #1e293b; font: inherit; font-size: 0.82rem; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease;
 }
+.companias-filtros-grid input { padding: 0 0.72rem; }
+.companias-filtros-grid select { padding: 0 2rem 0 0.7rem; }
+.companias-filtros-grid input::placeholder { color: #94a3b8; }
+.companias-filtros-grid input:focus,
+.companias-filtros-grid select:focus { border-color: var(--company-blue); box-shadow: 0 0 0 3px rgb(59 130 246 / 0.13); }
+.companias .selector-ciiu { width: 100%; min-width: 0; }
+.companias .selector-ciiu input { height: 2.45rem; }
+.companias .selector-ciiu .sugerencias { z-index: 30; border: 1px solid var(--company-line); border-radius: 0.65rem; box-shadow: 0 12px 28px rgb(15 23 42 / 0.14); }
+.companias .selector-ciiu .sugerencias li { padding: 0.6rem 0.7rem; }
+.companias-catastro-controls { display: flex; gap: 0.5rem; min-width: 0; }
+.companias-catastro-controls select { flex: 1; }
 
-.alerta.error {
-  margin: 1rem 0;
-  padding: 0.85rem 1rem;
-  border-radius: 6px;
-  background: var(--error-light);
-  color: var(--error);
-  border: 1px solid var(--error-border);
-  font-size: 0.9rem;
+.companias-feedback { display: grid; gap: 0.65rem; }
+.companias-feedback [data-slot="alert"] { border-radius: 0.7rem; }
+.companias-feedback [data-slot="alert-title"] { font-size: 0.83rem; }
+.companias-feedback [data-slot="alert-description"] { margin-top: 0.1rem; font-size: 0.8rem; }
+.companias-feedback a { color: var(--company-navy); font-weight: 600; text-underline-offset: 3px; }
+.companias-alerta-ok { border-color: #b9e4ce; background: #f0faf4; color: #17643d; }
+
+.companias-resultados-header { flex-direction: row; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #edf1f6; padding-bottom: 0.9rem; }
+.companias-page-badge { color: #475569; font-variant-numeric: tabular-nums; }
+.companias-tabla-content { padding-bottom: 0; }
+.companias .tabla-scroll { max-width: 100%; overflow: auto; border: 1px solid #e7edf4; border-radius: 0.65rem; scrollbar-color: #cbd5e1 transparent; scrollbar-width: thin; }
+.companias .tabla-scroll:focus-visible { outline: 3px solid rgb(59 130 246 / 0.35); outline-offset: 2px; }
+.companias .tabla-scroll.sin-datos { display: grid; min-height: 15rem; place-items: center; overflow: hidden; }
+.companias-empty-state { display: flex; width: 100%; min-height: 15rem; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; text-align: center; }
+.companias-empty-state > strong { color: #334155; font-size: 0.9rem; }
+.companias-empty-state > span { max-width: 25rem; margin: 0.35rem auto 0.9rem; color: #64748b; font-size: 0.8rem; }
+.companias-empty-state > svg { margin-bottom: 0.7rem; color: #64748b; }
+.companias table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.78rem; white-space: nowrap; }
+.companias th,
+.companias td { padding: 0.7rem 0.78rem; border-bottom: 1px solid #edf1f6; text-align: left; vertical-align: middle; }
+.companias thead th { position: sticky; z-index: 1; top: 0; background: #f7f9fc; color: #475569; font-size: 0.69rem; font-weight: 650; letter-spacing: 0.025em; }
+.companias tbody tr { transition: background-color 120ms ease; }
+.companias tbody tr:hover { background: #f8fafc; }
+.companias tbody tr:last-child td { border-bottom: 0; }
+.companias td.der,
+.companias th.der { text-align: right; font-variant-numeric: tabular-nums; }
+.companias .mono { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-variant-numeric: tabular-nums; }
+.companias .expediente { color: #475569; }
+.companias .nombre-compania { max-width: 280px; overflow: hidden; color: #1e293b; font-weight: 600; text-overflow: ellipsis; }
+.companias td.actividad { max-width: 280px; white-space: normal; overflow-wrap: anywhere; color: #475569; }
+.companias .tenue { color: #94a3b8; }
+.companias td.catastros { white-space: normal; }
+.companias .marcas-catastro { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+.companias .estado { height: auto; padding: 0.18rem 0.5rem; font-size: 0.66rem; font-weight: 650; }
+.companias .estado.activo { border-color: #ccebd9; background: #edf9f2; color: #187547; }
+.companias .estado.suspendido { border-color: #f0c9cc; background: #fff1f1; color: #a33138; }
+.companias .estado.pasivo { border-color: #e2e8f0; background: #f1f5f9; color: #64748b; }
+.companias .acciones-fila { display: flex; gap: 0.4rem; }
+.companias .acciones-fila [data-slot="button"] { min-height: 1.85rem; }
+.companias .vacio { min-width: 340px; padding: 3rem 1rem; text-align: center; white-space: normal; }
+.companias-vacio-icon { width: 2.5rem; height: 2.5rem; margin: 0 auto 0.75rem; border-radius: 0.75rem; }
+.companias .vacio strong,
+.companias .vacio span { display: block; }
+.companias .vacio strong { color: #334155; font-size: 0.9rem; }
+.companias .vacio span { max-width: 25rem; margin: 0.35rem auto 0.9rem; color: #64748b; font-size: 0.8rem; }
+.companias-cargando { padding: 2rem !important; text-align: center !important; color: #64748b; }
+.companias-cargando svg { display: inline-block; margin-right: 0.35rem; vertical-align: -0.25rem; }
+.companias-paginacion { justify-content: space-between; gap: 1rem; padding: 0.85rem 0 1rem; }
+.companias-pagina-resumen { color: #64748b; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.companias-pagina-acciones { gap: 0.45rem; }
+.companias [data-slot="button"] { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+
+@media (max-width: 1050px) {
+  .companias-filtros-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
-.alerta.ok {
-  margin: 1rem 0;
-  padding: 0.85rem 1rem;
-  border-radius: 6px;
-  background: var(--success-light);
-  color: var(--success);
-  border: 1px solid var(--success-border);
-  font-size: 0.9rem;
+@media (max-width: 720px) {
+  .companias { gap: 1rem; }
+  .companias-hero { align-items: flex-start; flex-direction: column; }
+  .companias-total { margin-left: 3.65rem; }
+  .companias-filtros-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+  .companias-card-header { align-items: flex-start; }
+  .companias .tabla-scroll { margin-right: -0.25rem; }
 }
-
-/* Badge del estado ante el SRI: distinto de la situación legal en Supercias. */
-.companias .estado {
-  display: inline-block;
-  padding: 0.1rem 0.45rem;
-  border-radius: 10px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  white-space: nowrap;
+@media (max-width: 480px) {
+  .companias-filtros-grid { grid-template-columns: 1fr; }
+  .companias-card-header { flex-wrap: wrap; }
+  .companias-card-header [data-slot="card-action"] { margin-left: auto; }
+  .companias-resultados-header { align-items: flex-start; }
+  .companias-paginacion { align-items: flex-start; flex-direction: column; }
+  .companias-pagina-acciones { width: 100%; justify-content: space-between; }
 }
-
-.companias .estado.activo {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.companias .estado.suspendido {
-  background: var(--error-light);
-  color: var(--error);
-}
-
-.companias .estado.pasivo {
-  background: var(--container-bg);
-  color: var(--text-soft);
-}
-
-.companias .ver {
-  padding: 0.22rem 0.55rem;
-  border: 1px solid var(--border-light);
-  border-radius: 4px;
-  background: var(--surface-alt);
-  cursor: pointer;
-  font-size: 0.76rem;
-  white-space: nowrap;
-}
-
-.companias .ver:hover {
-  background: var(--primary-light);
-  border-color: var(--secondary);
-}
-
-/* Los dos botones de la última columna, uno al lado del otro y sin partirse. */
-.companias .acciones-fila {
-  display: flex;
-  gap: 0.35rem;
-}
-
-
-/* La columna de catastros apila una marca por catastro; la tabla es `nowrap`,
-   de ahí el `white-space: normal` explícito. */
-.companias td.catastros {
-  white-space: normal;
+@media (prefers-reduced-motion: reduce) {
+  .companias *, .companias *::before, .companias *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }

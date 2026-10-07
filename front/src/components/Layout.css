@@ -113,6 +113,13 @@
   background: #f4f7fa;
 }
 
+.contenido:has(.companias),
+.contenido:has(.balances),
+.contenido:has(.analisis),
+.contenido:has(.tributario) {
+  max-width: none;
+}
+
 .contenido:has(.utilidades) {
   max-width: none;
   padding: 0;

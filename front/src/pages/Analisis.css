@@ -368,3 +368,113 @@
   font-size: 0.68rem;
   color: var(--text-muted);
 }
+
+/* Friday / shadcn presentation for the full analysis workspace. */
+.analisis {
+  --analysis-navy: #1e3a5f;
+  --analysis-line: #dbe4ee;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.1rem;
+  color: var(--foreground);
+}
+.analisis-hero,
+.analisis-title-row,
+.analisis-card-heading,
+.analisis-empresa-heading,
+.analisis .ficha,
+.analisis .sub { display: flex; align-items: center; }
+.analisis-hero { justify-content: space-between; gap: 1rem; }
+.analisis-title-row { gap: 0.9rem; }
+.analisis-hero-icon,
+.analisis-section-icon,
+.analisis-company-icon,
+.analisis-empty-icon {
+  display: grid; flex: 0 0 auto; place-items: center; color: var(--analysis-navy); background: #e8eff8;
+}
+.analisis-hero-icon { width: 2.75rem; height: 2.75rem; border-radius: 0.85rem; }
+.analisis-eyebrow { margin: 0 0 0.2rem; color: #64748b; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.13em; }
+.analisis-hero h1 { margin: 0; color: var(--analysis-navy); font-size: clamp(1.5rem, 2vw, 1.85rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.15; }
+.analisis-intro { margin: 0.32rem 0 0; color: #64748b; font-size: 0.88rem; }
+.analisis-busqueda-card,
+.analisis-empresa-card,
+.analisis-workspace-card,
+.analisis-empty-card { min-width: 0; border-radius: 0.9rem; background: #fff; box-shadow: 0 2px 8px rgb(30 58 95 / 0.035), 0 1px 2px rgb(30 58 95 / 0.04); }
+.analisis-card-header { border-bottom: 1px solid #edf1f6; padding-bottom: 0.9rem; }
+.analisis-card-heading { gap: 0.7rem; }
+.analisis-section-icon { width: 2rem; height: 2rem; border-radius: 0.6rem; }
+.analisis-card-header [data-slot="card-title"] { color: #1e293b; font-size: 0.96rem; font-weight: 650; }
+.analisis-card-header [data-slot="card-description"] { margin-top: 0.18rem; color: #64748b; font-size: 0.78rem; }
+.analisis-busqueda-card [data-slot="card-content"] { padding-top: 0.9rem; }
+.analisis .buscador { max-width: min(100%, 760px); }
+.analisis .buscador [data-slot="field"] { gap: 0.42rem; }
+.analisis .buscador [data-slot="field-label"] { color: #475569; font-size: 0.76rem; font-weight: 600; }
+.analisis .buscador input { width: 100%; height: 2.55rem; border: 1px solid var(--analysis-line); border-radius: 0.55rem; background: #fff; color: #1e293b; font: inherit; font-size: 0.84rem; }
+.analisis .buscador input:focus-visible { border-color: #3b82f6; box-shadow: 0 0 0 3px rgb(59 130 246 / 0.13); }
+.analisis .sugerencias { top: 100%; z-index: 20; margin-top: 0.35rem; overflow: hidden; border: 1px solid var(--analysis-line); border-radius: 0.65rem; box-shadow: 0 12px 28px rgb(15 23 42 / 0.14); }
+.analisis .sugerencias button { padding: 0.7rem 0.8rem; }
+.analisis .sugerencias button:hover, .analisis .sugerencias button:focus-visible { background: #f1f6fb; outline: none; }
+.analisis-feedback, .analisis-loading { border-radius: 0.7rem; }
+.analisis-feedback [data-slot="alert-title"], .analisis-loading [data-slot="alert-title"] { font-size: 0.83rem; }
+.analisis-feedback [data-slot="alert-description"], .analisis-loading [data-slot="alert-description"] { margin-top: 0.1rem; font-size: 0.8rem; }
+.analisis-loading > svg { width: 1rem; height: 1rem; }
+.analisis .ficha { justify-content: space-between; gap: 1.25rem; margin: 0; padding: 1rem 1.15rem; }
+.analisis-empresa-heading { gap: 0.7rem; }
+.analisis-company-icon { width: 2.4rem; height: 2.4rem; border-radius: 0.7rem; }
+.analisis .ficha h2 { margin: 0; color: #1e293b; font-size: 1.05rem; font-weight: 650; letter-spacing: -0.02em; }
+.analisis .ficha .sub { flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 0; color: #64748b; font-size: 0.75rem; }
+.analisis .ficha .sub [data-slot="badge"] { max-width: 100%; overflow: hidden; color: #475569; text-overflow: ellipsis; }
+.analisis .boton-informe { flex: none; border-radius: 0.55rem; color: var(--analysis-navy); text-decoration: none; }
+.analisis .boton-informe:hover { background: #f1f6fb; color: var(--analysis-navy); }
+.analisis-workspace-card { overflow: hidden; }
+.analisis .pestanas { display: flex; gap: 0.2rem; overflow-x: auto; margin: 0; padding: 0 1rem; border-bottom: 1px solid #edf1f6; scrollbar-width: thin; }
+.analisis .pestanas button { flex: 0 0 auto; min-height: 3rem; padding: 0.65rem 0.85rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #64748b; font: inherit; font-size: 0.8rem; font-weight: 550; white-space: nowrap; transition: color 140ms ease, border-color 140ms ease; }
+.analisis .pestanas button:hover { color: var(--analysis-navy); }
+.analisis .pestanas button:focus-visible { border-radius: 0.35rem; outline: 2px solid #3b82f6; outline-offset: -3px; }
+.analisis .pestanas button.activa { border-bottom-color: var(--analysis-navy); color: var(--analysis-navy); font-weight: 650; }
+.analisis-panel-content { min-width: 0; padding-top: 1rem; }
+.analisis .bloque { min-width: 0; }
+.analisis .bloque h4 { margin: 0 0 0.65rem; color: #475569; font-size: 0.73rem; font-weight: 700; letter-spacing: 0.08em; }
+.analisis .controles { gap: 0.85rem; margin-bottom: 0.85rem; padding: 0.7rem 0.8rem; border: 1px solid #e5ebf2; border-radius: 0.65rem; background: #f8fafc; color: #475569; font-size: 0.76rem; }
+.analisis .controles .check { gap: 0.45rem; font-size: 0.76rem; }
+.analisis .controles input[type="checkbox"] { accent-color: var(--analysis-navy); }
+.analisis .controles select { min-height: 2rem; margin-left: 0.3rem; padding: 0.25rem 1.6rem 0.25rem 0.5rem; border: 1px solid var(--analysis-line); border-radius: 0.45rem; background: #fff; color: #334155; font: inherit; }
+.analisis .conteo { font-variant-numeric: tabular-nums; }
+.analisis .scroll { min-width: 0; max-width: 100%; overflow: auto; border: 1px solid #e7edf4; border-radius: 0.65rem; scrollbar-color: #cbd5e1 transparent; scrollbar-width: thin; }
+.analisis .scroll:focus-within { outline: 2px solid rgb(59 130 246 / 0.15); outline-offset: 2px; }
+.analisis .tabla { min-width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; font-size: 0.78rem; }
+.analisis .tabla th, .analisis .tabla td { padding: 0.55rem 0.7rem; border-bottom: 1px solid #edf1f6; }
+.analisis .tabla thead th { position: sticky; z-index: 1; top: 0; background: #f7f9fc; color: #475569; font-size: 0.68rem; font-weight: 650; }
+.analisis .tabla tbody tr:last-child td { border-bottom: 0; }
+.analisis .tabla tbody tr:hover { background: #f8fafc; }
+.analisis .tabla tr.destacada { background: #f1f6fb; color: #1e3a5f; }
+.analisis .mono { font-size: 0.76rem; }
+.analisis .var { background: #f8fafc; }
+.analisis .codigo { min-width: 5.2rem; color: #64748b; }
+.analisis .aviso { margin: 0.8rem 0 0; padding: 0.7rem 0.85rem; border: 1px solid #f2dfa9; border-radius: 0.65rem; background: #fffbeb; color: #92400e; font-size: 0.76rem; line-height: 1.55; }
+.analisis .sectorial .pares { gap: 0.4rem; margin-bottom: 0.9rem; }
+.analisis .sectorial .par { gap: 0.4rem; padding: 0.35rem 0.55rem; border-color: #e3eaf2; border-radius: 0.5rem; background: #f8fafc; }
+.analisis .comparacion td.celda { min-width: 10rem; }
+.analisis .comparacion .barra { height: 0.32rem; border-radius: 99px; }
+.analisis .comparacion .barra .relleno { border-radius: inherit; }
+.analisis-empty-card { min-height: 12rem; }
+.analisis-empty-content { display: flex; min-height: 12rem; flex-direction: column; align-items: center; justify-content: center; padding-block: 2rem; text-align: center; }
+.analisis-empty-icon { width: 2.5rem; height: 2.5rem; margin-bottom: 0.7rem; border-radius: 0.75rem; }
+.analisis-empty-content strong { color: #334155; font-size: 0.9rem; }
+.analisis-empty-content > span:last-child { margin-top: 0.3rem; color: #64748b; font-size: 0.8rem; }
+.analisis [data-slot="button"] { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+@media (max-width: 680px) {
+  .analisis { gap: 0.9rem; }
+  .analisis .ficha { align-items: flex-start; flex-direction: column; }
+  .analisis .boton-informe { align-self: flex-start; }
+  .analisis .pestanas { padding-inline: 0.5rem; }
+  .analisis .pestanas button { padding-inline: 0.65rem; font-size: 0.75rem; }
+  .analisis .controles { align-items: flex-start; flex-direction: column; }
+  .analisis .conteo { margin-left: 0; }
+  .analisis .sectorial .par { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .analisis *, .analisis *::before, .analisis *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

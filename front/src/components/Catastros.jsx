@@ -50,12 +50,16 @@ function aniosDisponibles(aniosCatastro, catastro) {
   return aniosCatastro[catastro] ?? []
 }
 
-export function SelectorCatastro({ catastro, anio, aniosCatastro, onChange }) {
+export function SelectorCatastro({ catastro, anio, aniosCatastro, onChange, id, yearId, labelledBy }) {
   const anios = aniosDisponibles(aniosCatastro, catastro)
 
   return (
     <>
       <select
+        id={id}
+        name="catastro"
+        aria-label={labelledBy ? undefined : 'Filtrar por catastro público'}
+        aria-labelledby={labelledBy}
         value={catastro}
         onChange={e => onChange({ catastro: e.target.value, anio: '' })}
         title="Filtra por pertenencia a un catastro público, enlazado por RUC"
@@ -67,7 +71,7 @@ export function SelectorCatastro({ catastro, anio, aniosCatastro, onChange }) {
         ))}
       </select>
       {ADMITE_ANIO.has(catastro) && anios.length > 0 && (
-        <select value={anio} onChange={e => onChange({ catastro, anio: e.target.value })}>
+        <select id={yearId} name="catastroAnio" aria-label="Año del catastro" value={anio} onChange={e => onChange({ catastro, anio: e.target.value })}>
           <option value="">Cualquier año</option>
           {anios.map(a => (
             <option key={a} value={a}>

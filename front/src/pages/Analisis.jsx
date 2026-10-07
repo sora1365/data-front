@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { ArrowUpRight, ChartNoAxesCombined, FileSearch, LoaderCircle, Search } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import {
   listarBalances,
   obtenerComparativo,
@@ -115,17 +122,36 @@ export default function Analisis() {
   }, [expedienteUrl, seleccionar])
 
   return (
-    <div className="analisis">
-      <h2>Análisis financiero</h2>
+    <main className="analisis">
+      <header className="analisis-hero">
+        <div className="analisis-title-row">
+          <span className="analisis-hero-icon" aria-hidden="true"><ChartNoAxesCombined size={20} /></span>
+          <div>
+            <p className="analisis-eyebrow">LECTURA FINANCIERA</p>
+            <h1>Análisis financiero</h1>
+            <p className="analisis-intro">Compara la evolución, los indicadores y el desempeño sectorial de una compañía.</p>
+          </div>
+        </div>
+      </header>
 
-      <div className="buscador">
-        <input
-          placeholder="Busca una compañía por razón social o RUC…"
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-        />
+      <Card className="analisis-busqueda-card">
+        <CardHeader className="analisis-card-header">
+          <div className="analisis-card-heading">
+            <span className="analisis-section-icon" aria-hidden="true"><Search size={16} /></span>
+            <div>
+              <CardTitle>Selecciona una compañía</CardTitle>
+              <CardDescription>Busca por razón social o RUC para cargar su análisis financiero.</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="buscador">
+            <Field>
+              <FieldLabel htmlFor="analisis-compania">Compañía o RUC</FieldLabel>
+              <Input id="analisis-compania" name="compania" type="search" autoComplete="off" placeholder="Escribe al menos 3 caracteres…" value={busqueda} onChange={e => setBusqueda(e.target.value)} aria-controls="analisis-sugerencias" aria-expanded={candidatas.length > 0} />
+            </Field>
         {candidatas.length > 0 && (
-          <ul className="sugerencias">
+          <ul className="sugerencias" id="analisis-sugerencias">
             {candidatas.map(c => (
               <li key={c.expediente}>
                 <button type="button" onClick={() => seleccionar(c.expediente)}>
@@ -138,38 +164,42 @@ export default function Analisis() {
             ))}
           </ul>
         )}
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {error && <p className="error">{error}</p>}
-      {cargando && <p className="cargando">Cargando análisis…</p>}
+      {error && <Alert variant="destructive" className="analisis-feedback"><AlertTitle>No se pudo cargar el análisis</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {cargando && <Alert className="analisis-loading" aria-live="polite"><LoaderCircle className="animate-spin" aria-hidden="true" /><AlertTitle>Cargando análisis financiero…</AlertTitle><AlertDescription>Estamos reuniendo los estados, indicadores y referencias sectoriales.</AlertDescription></Alert>}
 
       {empresa && !cargando && (
         <>
-          <div className="ficha">
+          <Card className="analisis-empresa-card">
+          <CardContent className="ficha">
             <div>
-              <h3>{empresa.nombre}</h3>
+              <div className="analisis-empresa-heading"><span className="analisis-company-icon" aria-hidden="true"><FileSearch size={18} /></span><div><p className="analisis-eyebrow">COMPAÑÍA SELECCIONADA</p><h2>{empresa.nombre}</h2></div></div>
               <p className="sub">
-                RUC {empresa.ruc} · Expediente {empresa.expediente}
-                {empresa.rama ? ` · ${empresa.rama}` : ''}
+                <Badge variant="outline">RUC {empresa.ruc}</Badge>
+                <Badge variant="outline">Expediente {empresa.expediente}</Badge>
+                {empresa.rama && <Badge variant="secondary">{empresa.rama}</Badge>}
               </p>
             </div>
             {/* El informe se abre en una pestaña propia: quien lo genera suele
                 querer seguir consultando el análisis mientras tanto. */}
-            <a
-              className="boton-informe"
-              href={`/informe/${empresa.expediente}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Informe PDF
-            </a>
-          </div>
+            <Button asChild variant="outline" className="boton-informe"><a href={`/informe/${empresa.expediente}`} target="_blank" rel="noreferrer">Informe PDF <ArrowUpRight data-icon="inline-end" aria-hidden="true" /></a></Button>
+          </CardContent>
+          </Card>
 
-          <div className="pestanas">
+          <Card className="analisis-workspace-card">
+          <div className="pestanas" role="tablist" aria-label="Secciones del análisis financiero">
             {PESTANAS.map(p => (
               <button
                 key={p.id}
                 type="button"
+                role="tab"
+                id={`analisis-tab-${p.id}`}
+                aria-controls="analisis-panel"
+                aria-selected={pestana === p.id}
+                tabIndex={pestana === p.id ? 0 : -1}
                 className={pestana === p.id ? 'activa' : ''}
                 onClick={() => setPestana(p.id)}
               >
@@ -178,19 +208,20 @@ export default function Analisis() {
             ))}
           </div>
 
-          {pestana === 'estados' && <Estados datos={estados} />}
-          {pestana === 'indicadores' && <Indicadores datos={indicadores} />}
-          {pestana === 'sector' && <Sectorial datos={sectorial} />}
-          {pestana === 'resumen' && <Resumen datos={resumen} />}
+          <CardContent className="analisis-panel-content" role="tabpanel" id="analisis-panel" aria-labelledby={`analisis-tab-${pestana}`}>
+            {pestana === 'estados' && <Estados datos={estados} />}
+            {pestana === 'indicadores' && <Indicadores datos={indicadores} />}
+            {pestana === 'sector' && <Sectorial datos={sectorial} />}
+            {pestana === 'resumen' && <Resumen datos={resumen} />}
+          </CardContent>
+          </Card>
         </>
       )}
 
       {!empresa && !cargando && (
-        <p className="pista">
-          Escribe al menos tres caracteres para buscar una compañía.
-        </p>
+        <Card className="analisis-empty-card"><CardContent className="analisis-empty-content"><span className="analisis-empty-icon" aria-hidden="true"><Search size={20} /></span><strong>Empieza buscando una compañía</strong><span>Escribe al menos tres caracteres. Puedes usar una razón social o un RUC.</span></CardContent></Card>
       )}
-    </div>
+    </main>
   )
 }
 
