@@ -14,6 +14,7 @@ import { SegmentosModule } from './modules/segmentos/segmentos.module';
 import { PresenciaModule } from './modules/presencia/presencia.module';
 import { TributarioModule } from './modules/tributario/tributario.module';
 import { ScrapingModule } from './modules/scraping/scraping.module';
+import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { ScrapingModule } from './modules/scraping/scraping.module';
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
       database: process.env.DB_NAME || 'app_db',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: databaseSslConfig(),
       autoLoadEntities: true,
       migrations: [join(__dirname, 'database', 'migrations', '*{.ts,.js}')],
       // synchronize QUEDA DESACTIVADO A PROPÓSITO, también en desarrollo.

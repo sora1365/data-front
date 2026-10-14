@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { join } from 'node:path';
+import { databaseSslConfig } from './database/database-ssl';
 
 config();
 
@@ -21,7 +22,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'app_db',
   entities: [join(__dirname, 'modules', '**', '*.entity{.ts,.js}')],
   migrations: [join(__dirname, 'database', 'migrations', '*{.ts,.js}')],
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: databaseSslConfig(),
   synchronize: false,
 });
 // Sin `export default`: el CLI de TypeORM exige que el archivo exporte

@@ -6,6 +6,7 @@ import { once } from 'node:events';
 // `mod.default`, que es `undefined`. Debe ser un import de namespace.
 import * as copyStreams from 'pg-copy-streams';
 import { SESSION_TUNING } from './sql/import.sql';
+import { databaseSslConfig } from '../../../database/database-ssl';
 
 export interface CopyWriter {
   write(text: string): Promise<void>;
@@ -50,6 +51,7 @@ export abstract class PgCopySession {
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
       database: process.env.DB_NAME || 'app_db',
+      ssl: databaseSslConfig(),
     });
     await client.connect();
     for (const stmt of SESSION_TUNING) {
