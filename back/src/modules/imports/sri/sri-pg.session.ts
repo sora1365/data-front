@@ -31,6 +31,19 @@ export class SriPgSession extends PgCopySession {
     this.tabla = stagingSriTable(jobId);
   }
 
+  /**
+   * El import SRI corre en el clúster de producción de 2 GB. Sobrescribe el
+   * tuning genérico de cargas masivas para limitar el consumo de memoria de
+   * consultas e impedir workers paralelos de mantenimiento.
+   */
+  async connect(): Promise<void> {
+    await super.connect();
+    await this.client.query("SET maintenance_work_mem = '128MB'");
+    await this.client.query("SET work_mem = '16MB'");
+    await this.client.query("SET temp_buffers = '8MB'");
+    await this.client.query('SET max_parallel_maintenance_workers = 0');
+  }
+
   async createStaging(): Promise<void> {
     await this.dropTable(this.tabla);
     await this.client.query(createStagingSriSql(this.tabla));
@@ -93,7 +106,8 @@ export class SriPgSession extends PgCopySession {
 
   async vacuumAnalyze(): Promise<void> {
     for (const t of ['persona_natural', 'sociedad_no_supervisada', 'establecimiento']) {
-      await this.client.query(`VACUUM (ANALYZE) ${t}`);
+      this.logger.log(`VACUUM (ANALYZE) ${t}`);
+      await this.client.query(`VACUUM (ANALYZE, PARALLEL 0) ${t}`);
     }
   }
 
