@@ -70,11 +70,11 @@ export default function Crm() {
   return (
     <div className="crm">
       <header className="crm-cabecera">
-        <p className="crm-seccion">GESTIÓN COMERCIAL</p>
+        <p className="crm-seccion">CRM</p>
         <h2>Oportunidades</h2>
         <p className="crm-subtitulo">
-          Lo que está en juego ahora mismo, por etapa. Las oportunidades se abren desde la lista
-          de trabajo de un segmento.
+          Lo que está en juego ahora mismo, por etapa. Los prospectos llegan desde el gestor
+          comercial y aquí empieza su flujo.
         </p>
       </header>
 

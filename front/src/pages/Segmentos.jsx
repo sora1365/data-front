@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   correrSegmento,
   correrTodos,
@@ -143,7 +142,6 @@ function Miembros({ codigo }) {
   const [datos, setDatos] = useState(null)
   const [total, setTotal] = useState(0)
   const [error, setError] = useState(null)
-  const navegar = useNavigate()
 
   const cargar = useCallback(async () => {
     setError(null)
@@ -167,22 +165,6 @@ function Miembros({ codigo }) {
   const marcar = async (fila, estado) => {
     await marcarEstado(fila.tipo_sujeto, fila.clave, estado)
     cargar()
-  }
-
-  /**
-   * Pasa el prospecto al CRM.
-   *
-   * Lo único que cruza la frontera entre los dos módulos es a quién se envía y
-   * de qué segmento salió. Qué producto se le ofrece, por cuánto y en qué etapa
-   * entra son decisiones del CRM, y se toman en su pantalla.
-   */
-  const enviarAlCrm = fila => {
-    const params = new URLSearchParams({
-      tipo: fila.tipo_sujeto,
-      clave: fila.clave,
-      segmento: codigo,
-    })
-    navegar(`/crm/nueva?${params}`)
   }
 
   return (
@@ -240,12 +222,6 @@ function Miembros({ codigo }) {
                   <td className="der mono">{dinero(d.activos_ult)}</td>
                   <td className="der mono">{dinero(d.activos_prev)}</td>
                   <td className="acciones-fila">
-                    {/* El gestor comercial no abre oportunidades: envía el
-                        prospecto al CRM y es allí donde empieza su flujo. Lo
-                        único que viaja es a quién y de qué segmento salió. */}
-                    <button type="button" onClick={() => enviarAlCrm(d)}>
-                      Enviar al CRM
-                    </button>
                     <button type="button" onClick={() => marcar(d, 'en_gestion')}>
                       En gestión
                     </button>
@@ -266,7 +242,6 @@ function Miembros({ codigo }) {
           </table>
         </div>
       )}
-
     </div>
   )
 }
