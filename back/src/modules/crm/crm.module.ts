@@ -3,6 +3,7 @@ import { SegmentosModule } from '../segmentos/segmentos.module';
 import { CrmController } from './crm.controller';
 import { CrmRestController } from './crm-rest.controller';
 import { CrmRestService } from './crm-rest.service';
+import { CrmCoincidenciasService } from './crm-coincidencias.service';
 import { CrmService } from './crm.service';
 
 /**
@@ -13,7 +14,7 @@ import { CrmService } from './crm.service';
 @Module({
   imports: [SegmentosModule],
   controllers: [CrmController, CrmRestController],
-  providers: [CrmService, CrmRestService],
+  providers: [CrmService, CrmRestService, CrmCoincidenciasService],
   exports: [CrmService],
 })
 export class CrmModule {}

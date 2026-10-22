@@ -12,6 +12,7 @@ import {
 import type { Response } from 'express';
 import { Usuario } from '../../common/http/usuario.decorator';
 import { CrmRestService } from './crm-rest.service';
+import { CrmCoincidenciasService } from './crm-coincidencias.service';
 
 /**
  * El API que consumen las pantallas del CRM.
@@ -28,7 +29,26 @@ import { CrmRestService } from './crm-rest.service';
  */
 @Controller('crm/api')
 export class CrmRestController {
-  constructor(private readonly rest: CrmRestService) {}
+  constructor(
+    private readonly rest: CrmRestService,
+    private readonly coincidencias: CrmCoincidenciasService,
+  ) {}
+
+  /**
+   * Si la empresa que se está escribiendo ya existe.
+   *
+   * Va declarada **antes** que `:recurso/:id`: Nest resuelve por orden, y el
+   * comodín de dos segmentos se tragaría esta ruta y buscaría un recurso
+   * llamado «coincidencias».
+   */
+  @Get('coincidencias/empresa')
+  coincidenciasDeEmpresa(
+    @Query('nombre') nombre?: string,
+    @Query('ruc') ruc?: string,
+    @Query('excluir') excluir?: string,
+  ) {
+    return this.coincidencias.buscar(nombre, ruc, excluir);
+  }
 
   @Get(':recurso')
   async getList(

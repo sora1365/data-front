@@ -13,6 +13,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Company, Sale } from "../types";
 import { getTranslatedCompanySizeLabel } from "./getTranslatedCompanySizeLabel";
 import { sizes } from "./sizes";
+import { AvisoEmpresaRepetida } from "./AvisoEmpresaRepetida";
 
 const isUrl = (url: string) => {
   if (!url) return;
@@ -32,6 +33,7 @@ export const CompanyInputs = () => {
 
   return (
     <div className="flex flex-col gap-4 p-1">
+      <AvisoEmpresaRepetida />
       <CompanyDisplayInputs />
       <div className={`flex gap-6 ${isMobile ? "flex-col" : "flex-row"}`}>
         <div className="flex flex-col gap-10 flex-1">
