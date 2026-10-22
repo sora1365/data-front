@@ -77,21 +77,52 @@ export class CampaniasService {
     return { ...filas[0], resumen };
   }
 
+  /**
+   * Crea una campaña, opcionalmente desde una plantilla.
+   *
+   * Con `plantilla`, el asunto y el cuerpo se **copian** a la campaña en vez de
+   * referenciarse. Es a propósito: editar la plantilla el mes que viene no
+   * puede cambiar lo que ya se envió, y una campaña que muestra un texto
+   * distinto del que recibió la gente no sirve ni para repetirla ni para
+   * responder a una queja.
+   */
   async crear(datos: Record<string, any>, usuario: string) {
-    const problemas = problemasDeCampania(datos);
+    let base = { ...datos };
+
+    if (datos.plantilla) {
+      const plantilla = (
+        await this.dataSource.query(`SELECT * FROM crm.plantilla_correo WHERE id = $1`, [
+          datos.plantilla,
+        ])
+      )[0];
+      if (!plantilla) throw new NotFoundException(`No existe la plantilla ${datos.plantilla}`);
+
+      base = {
+        ...base,
+        asunto: datos.asunto ?? plantilla.asunto,
+        cuerpo: datos.cuerpo ?? plantilla.cuerpo,
+        remitente: datos.remitente ?? plantilla.remitente,
+        producto: datos.producto ?? plantilla.producto,
+        marca: datos.marca ?? plantilla.marca,
+        nombre: datos.nombre ?? plantilla.nombre,
+      };
+    }
+
+    const problemas = problemasDeCampania(base);
     if (problemas.length) throw new BadRequestException(problemas.join(' '));
 
     const res = await this.dataSource.query(
-      `INSERT INTO crm.campania (nombre, marca, segmento, producto, asunto, cuerpo, remitente, creada_por)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      `INSERT INTO crm.campania (nombre, marca, segmento, producto, asunto, cuerpo, remitente, plantilla, creada_por)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
       [
-        datos.nombre ?? datos.asunto,
-        datos.marca ?? null,
-        datos.segmento ?? null,
-        datos.producto ?? null,
-        datos.asunto,
-        datos.cuerpo,
-        datos.remitente ?? null,
+        base.nombre ?? base.asunto,
+        base.marca ?? null,
+        base.segmento ?? null,
+        base.producto ?? null,
+        base.asunto,
+        base.cuerpo,
+        base.remitente ?? null,
+        datos.plantilla ?? null,
         usuario,
       ],
     );
@@ -189,6 +220,14 @@ export class CampaniasService {
       [id],
     );
 
+    // Los adjuntos son los mismos para toda la campaña: se resuelven una vez.
+    const adjuntos = (await this.adjuntos(id)).length
+      ? await this.dataSource.query(
+          `SELECT nombre, ruta FROM crm.campania_adjunto WHERE campania = $1`,
+          [id],
+        )
+      : [];
+
     let enviados = 0;
     let fallidos = 0;
 
@@ -214,6 +253,7 @@ export class CampaniasService {
             asunto: personalizar(campania.asunto, valores),
             cuerpo: personalizar(campania.cuerpo, valores),
             de: campania.remitente ?? undefined,
+            adjuntos: adjuntos.length ? adjuntos : undefined,
           });
           await this.dataSource.query(
             `UPDATE crm.campania_envio
@@ -244,6 +284,125 @@ export class CampaniasService {
 
     this.log.log(`Campaña ${id}: ${enviados} enviados, ${fallidos} fallidos`);
     return this.obtener(id);
+  }
+
+  // -------------------------------------------------------------- plantillas
+
+  /**
+   * Las plantillas, opcionalmente las de un producto.
+   *
+   * Filtrar por producto es el caso normal: el gestor comercial entrega una
+   * lista diciendo qué se le ofrece a esa gente, y lo que se les escribe sale
+   * de ahí. Tener que buscar entre todas las plantillas de todas las unidades
+   * es cómo se manda el correo de contabilidad a una lista de auditoría.
+   */
+  async plantillas(producto?: string) {
+    const params: any[] = [];
+    let filtro = 'WHERE p.activa';
+    if (producto) {
+      params.push(producto);
+      filtro += ` AND p.producto = $${params.length}`;
+    }
+    return this.dataSource.query(
+      `SELECT p.*, pr.nombre AS producto_nombre, m.nombre AS marca_nombre
+         FROM crm.plantilla_correo p
+         LEFT JOIN producto pr ON pr.codigo = p.producto
+         LEFT JOIN crm.marca m ON m.codigo = p.marca
+        ${filtro}
+        ORDER BY pr.nombre NULLS LAST, p.nombre`,
+      params,
+    );
+  }
+
+  async crearPlantilla(datos: Record<string, any>, usuario: string) {
+    const problemas = problemasDeCampania(datos);
+    if (problemas.length) throw new BadRequestException(problemas.join(' '));
+
+    const res = await this.dataSource.query(
+      `INSERT INTO crm.plantilla_correo (nombre, asunto, cuerpo, producto, marca, remitente, creada_por)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [
+        datos.nombre ?? datos.asunto,
+        datos.asunto,
+        datos.cuerpo,
+        datos.producto ?? null,
+        datos.marca ?? null,
+        datos.remitente ?? null,
+        usuario,
+      ],
+    );
+    const id = (Array.isArray(res[0]) ? res[0][0] : res[0]).id;
+    return (await this.plantillas()).find((p: any) => String(p.id) === String(id));
+  }
+
+  async editarPlantilla(id: number, datos: Record<string, any>) {
+    const actual = (
+      await this.dataSource.query(`SELECT * FROM crm.plantilla_correo WHERE id = $1`, [id])
+    )[0];
+    if (!actual) throw new NotFoundException(`No existe la plantilla ${id}`);
+
+    const mezcla = { ...actual, ...datos };
+    const problemas = problemasDeCampania(mezcla);
+    if (problemas.length) throw new BadRequestException(problemas.join(' '));
+
+    await this.dataSource.query(
+      `UPDATE crm.plantilla_correo
+          SET nombre = $1, asunto = $2, cuerpo = $3, producto = $4, marca = $5,
+              remitente = $6, activa = $7, actualizada_en = now()
+        WHERE id = $8`,
+      [
+        mezcla.nombre,
+        mezcla.asunto,
+        mezcla.cuerpo,
+        mezcla.producto ?? null,
+        mezcla.marca ?? null,
+        mezcla.remitente ?? null,
+        mezcla.activa ?? true,
+        id,
+      ],
+    );
+    return (await this.plantillas()).find((p: any) => String(p.id) === String(id));
+  }
+
+  // ---------------------------------------------------------------- adjuntos
+
+  async adjuntos(campania: number) {
+    return this.dataSource.query(
+      `SELECT id, nombre, tipo, tamano, subido_por, subido_en
+         FROM crm.campania_adjunto WHERE campania = $1 ORDER BY subido_en`,
+      [campania],
+    );
+  }
+
+  async agregarAdjunto(
+    campania: number,
+    archivo: { nombre: string; ruta: string; tipo?: string; tamano: number },
+    usuario: string,
+  ) {
+    const estado = (
+      await this.dataSource.query(`SELECT estado FROM crm.campania WHERE id = $1`, [campania])
+    )[0];
+    if (!estado) throw new NotFoundException(`No existe la campaña ${campania}`);
+    // Adjuntar algo a una campaña ya enviada no cambia lo que recibieron, y
+    // deja la ficha diciendo que llevaba un documento que nadie recibió.
+    if (estado.estado === 'enviada' || estado.estado === 'enviando') {
+      throw new BadRequestException('Esta campaña ya se envió: sus adjuntos no se pueden cambiar.');
+    }
+
+    await this.dataSource.query(
+      `INSERT INTO crm.campania_adjunto (campania, nombre, ruta, tipo, tamano, subido_por)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [campania, archivo.nombre, archivo.ruta, archivo.tipo ?? null, archivo.tamano, usuario],
+    );
+    return this.adjuntos(campania);
+  }
+
+  async quitarAdjunto(campania: number, id: number) {
+    await this.dataSource.query(
+      `DELETE FROM crm.campania_adjunto WHERE id = $1 AND campania = $2`,
+      [id, campania],
+    );
+    return this.adjuntos(campania);
   }
 
   // ----------------------------------------------------------- consentimiento

@@ -2,18 +2,40 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { crearMulterConfig } from '../../imports/multer.config';
 import type { Response } from 'express';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { CampaniasService } from './campanias.service';
+
+/**
+ * Lo que se puede adjuntar a una campaña.
+ *
+ * Documentos comerciales, no cualquier cosa: una propuesta, un tarifario, un
+ * folleto. Se dejan fuera los ejecutables y los comprimidos, que es lo que
+ * hace que un correo entero acabe en spam aunque el resto esté bien.
+ *
+ * Diez megas por archivo porque los proveedores rechazan correos grandes y el
+ * límite de la mayoría de buzones ronda los 25 MB contando todo.
+ */
+const multerAdjuntos = crearMulterConfig(
+  ['.pdf', '.docx', '.xlsx', '.pptx', '.png', '.jpg', '.jpeg'],
+  10 * 1024 * 1024,
+  'Se admiten documentos e imágenes, no ejecutables ni comprimidos.',
+);
 
 @Controller('crm/campanias')
 export class CampaniasController {
@@ -22,6 +44,30 @@ export class CampaniasController {
   @Get('estado')
   estado() {
     return { conectado: this.campanias.conectado };
+  }
+
+  /**
+   * Las plantillas, filtradas por producto.
+   *
+   * Va declarada antes que `:id`, porque Nest resuelve por orden y el comodín
+   * se tragaría «plantillas» buscando una campaña con ese id.
+   */
+  @Get('plantillas')
+  plantillas(@Query('producto') producto?: string) {
+    return this.campanias.plantillas(producto);
+  }
+
+  @Post('plantillas')
+  crearPlantilla(@Body() body: Record<string, any>, @Usuario() usuario: string) {
+    return this.campanias.crearPlantilla(body ?? {}, usuario);
+  }
+
+  @Patch('plantillas/:id')
+  editarPlantilla(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: Record<string, any>,
+  ) {
+    return this.campanias.editarPlantilla(id, body ?? {});
   }
 
   @Get()
@@ -58,6 +104,41 @@ export class CampaniasController {
   @HttpCode(200)
   enviar(@Param('id', ParseIntPipe) id: number) {
     return this.campanias.enviar(id);
+  }
+
+  // ---------------------------------------------------------------- adjuntos
+
+  @Get(':id/adjuntos')
+  adjuntos(@Param('id', ParseIntPipe) id: number) {
+    return this.campanias.adjuntos(id);
+  }
+
+  @Post(':id/adjuntos')
+  @UseInterceptors(FileInterceptor('file', multerAdjuntos))
+  agregarAdjunto(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() archivo: Express.Multer.File,
+    @Usuario() usuario: string,
+  ) {
+    if (!archivo) throw new BadRequestException('No llegó ningún archivo.');
+    return this.campanias.agregarAdjunto(
+      id,
+      {
+        nombre: archivo.originalname,
+        ruta: archivo.path,
+        tipo: archivo.mimetype,
+        tamano: archivo.size,
+      },
+      usuario,
+    );
+  }
+
+  @Delete(':id/adjuntos/:adjunto')
+  quitarAdjunto(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('adjunto', ParseIntPipe) adjunto: number,
+  ) {
+    return this.campanias.quitarAdjunto(id, adjunto);
   }
 
   // ------------------------------------------------------------ consentimiento
