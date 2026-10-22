@@ -2,7 +2,14 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { SegmentosService } from '../segmentos/segmentos.service';
-import { estadoAlAbrir, estadoTrasEtapa, repartirEnColumnas } from './crm.reglas';
+import {
+  EstadoVenta,
+  estadoAlAbrir,
+  estadoTrasEtapa,
+  puedeDesgalardonar,
+  puedePasarA,
+  repartirEnColumnas,
+} from './crm.reglas';
 
 /**
  * Filas de un resultado de TypeORM.
@@ -301,6 +308,18 @@ export class CrmService {
     )[0];
     if (!destino) throw new NotFoundException(`No existe la etapa «${etapa}»`);
 
+    // Una venta ya facturada no se deshace arrastrando una tarjeta: existe un
+    // documento con efectos tributarios y la corrección es una nota de crédito
+    // en el contable.
+    const venta = await this.ventaDe(id);
+    if (venta && !destino.es_ganada && !puedeDesgalardonar(venta.estado)) {
+      throw new ConflictException(
+        `Esta venta ya está ${venta.estado === 'cobrada' ? 'cobrada' : 'facturada'}` +
+          `${venta.documento ? ` con el documento ${venta.documento}` : ''}. ` +
+          'Anúlala desde el módulo contable antes de sacarla de «ganada».',
+      );
+    }
+
     const posicion = indice ?? (await this.siguienteIndice(etapa));
 
     await this.dataSource.transaction(async (manager) => {
@@ -325,8 +344,116 @@ export class CrmService {
       await this.segmentos.marcarEstado(actual.tipo_sujeto, actual.clave, nuevoEstado);
     }
 
+    // Ganar es lo que entrega la venta al módulo contable.
+    if (destino.es_ganada) await this.registrarVenta(id, usuario);
+
     await this.registrarInteraccionDeEtapa(id, actual.etapa, etapa, usuario);
     return this.oportunidad(id);
+  }
+
+  // -------------------------------------------------- ventas: el paso al contable
+
+  /**
+   * Lo que el módulo contable tiene pendiente.
+   *
+   * Devuelve los datos congelados al ganar **y** los actuales del perfil. Si el
+   * cliente cambió de dirección entre la venta y la emisión, quien factura
+   * tiene que verlo antes de emitir, no descubrirlo cuando le devuelvan el
+   * documento.
+   */
+  async ventas(filtros: { estado?: string; marca?: string } = {}) {
+    const where: string[] = [];
+    const params: any[] = [];
+    if (filtros.estado) {
+      params.push(filtros.estado);
+      where.push(`v.estado = $${params.length}`);
+    }
+    if (filtros.marca) {
+      params.push(filtros.marca);
+      where.push(`v.marca = $${params.length}`);
+    }
+
+    return this.dataSource.query(
+      `SELECT v.*, pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
+              p.nombre AS razon_social_actual, p.ruc AS ruc_actual,
+              p.direccion AS direccion_actual, p.correo, p.telefono
+         FROM crm_venta v
+         JOIN producto pr ON pr.codigo = v.producto
+         JOIN crm_marca m ON m.codigo = v.marca
+         LEFT JOIN perfil_comercial p
+                ON p.tipo_sujeto = v.tipo_sujeto AND p.clave = v.clave
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY v.ganada_en`,
+      params,
+    );
+  }
+
+  /** El contable marca lo que va haciendo con la venta. */
+  async marcarVenta(
+    id: number,
+    destino: EstadoVenta,
+    usuario: string,
+    datos: { documento?: string; fecha?: string; nota?: string },
+  ) {
+    const venta = (await this.dataSource.query(`SELECT * FROM crm_venta WHERE id = $1`, [id]))[0];
+    if (!venta) throw new NotFoundException(`No existe la venta ${id}`);
+
+    if (!puedePasarA(venta.estado, destino)) {
+      throw new ConflictException(
+        `Una venta ${venta.estado} no puede pasar a ${destino}.`,
+      );
+    }
+
+    const columnaFecha = {
+      facturada: 'facturada_en',
+      cobrada: 'cobrada_en',
+      anulada: 'anulada_en',
+      pendiente_facturacion: null,
+    }[destino];
+
+    await this.dataSource.query(
+      `UPDATE crm_venta
+          SET estado = $1,
+              documento = coalesce($2, documento),
+              nota = coalesce($3, nota),
+              marcada_por = $4
+              ${columnaFecha ? `, ${columnaFecha} = coalesce($5::timestamptz, now())` : ''}
+        WHERE id = $6`,
+      [destino, datos.documento ?? null, datos.nota ?? null, usuario, datos.fecha ?? null, id],
+    );
+
+    return (await this.dataSource.query(`SELECT * FROM crm_venta WHERE id = $1`, [id]))[0];
+  }
+
+  private async ventaDe(oportunidad: number) {
+    const filas = await this.dataSource.query(
+      `SELECT id, estado, documento FROM crm_venta WHERE oportunidad = $1`,
+      [oportunidad],
+    );
+    return filas[0] ?? null;
+  }
+
+  /**
+   * Crea la venta al ganar, congelando a quién se le vendió.
+   *
+   * Es idempotente: ganar una oportunidad que ya tenía venta no crea otra ni
+   * reabre la que el contable ya facturó. Sin eso, mover la tarjeta a «ganada»
+   * dos veces facturaría dos veces.
+   */
+  private async registrarVenta(oportunidad: number, usuario: string) {
+    await this.dataSource.query(
+      `INSERT INTO crm_venta
+         (oportunidad, marca, tipo_sujeto, clave, producto, monto, comercial,
+          ruc, razon_social, direccion, marcada_por)
+       SELECT o.id, o.marca, o.tipo_sujeto, o.clave, o.producto, o.monto, o.comercial,
+              p.ruc, p.nombre, p.direccion, $2
+         FROM crm_oportunidad o
+         LEFT JOIN perfil_comercial p
+                ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
+        WHERE o.id = $1
+       ON CONFLICT (oportunidad) DO NOTHING`,
+      [oportunidad, usuario],
+    );
   }
 
   /** Sacarla del tablero sin borrar nada: el histórico es lo que se mide. */
@@ -336,6 +463,31 @@ export class CrmService {
       [id],
     );
     return this.oportunidad(id);
+  }
+
+  // -------------------------------------------------- frontera con el gestor
+
+  /**
+   * Qué ofrecerle a un sujeto, preguntándoselo al gestor comercial.
+   *
+   * Es la única pregunta que el CRM le hace al otro módulo, y pasa por aquí a
+   * propósito: si la pantalla del CRM llamara directamente al API de segmentos,
+   * la frontera entre los dos módulos estaría en dos sitios y cada uno se
+   * enteraría de los cambios del otro por su cuenta.
+   *
+   * El gestor devuelve una fila por segmento **y** producto, así que el mismo
+   * producto llega repetido cuando el sujeto cae en dos segmentos que lo
+   * ofrecen, que es el caso normal. Se deduplica aquí, conservando el primero
+   * —vienen ordenados por prioridad— y no en la pantalla, para que cualquiera
+   * que consuma este endpoint reciba la lista ya limpia.
+   */
+  async sugerencias(tipoSujeto: string, clave: string) {
+    const filas = await this.segmentos.productosPara(tipoSujeto, clave);
+    const porCodigo = new Map<string, any>();
+    for (const fila of filas ?? []) {
+      if (!porCodigo.has(fila.codigo)) porCodigo.set(fila.codigo, fila);
+    }
+    return [...porCodigo.values()];
   }
 
   // -------------------------------------------------------------------- sujeto

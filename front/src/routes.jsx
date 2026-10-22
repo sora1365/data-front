@@ -62,10 +62,19 @@ export const NAVEGACION = [
       { ruta: '/ciiu', etiqueta: 'Catálogo CIIU', icono: <Icono d={ICONO_ARBOL} /> },
     ],
   },
+  // El gestor comercial dice a quién llamar; el CRM guarda qué pasó después de
+  // la llamada. Son dos herramientas distintas y van en grupos distintos:
+  // juntarlas sugiere que las oportunidades son una vista más del segmento, y
+  // entonces nadie sabe en cuál de las dos pantallas se trabaja cada cosa.
   {
-    titulo: 'Comercial',
+    titulo: 'Gestor comercial',
     items: [
       { ruta: '/segmentos', etiqueta: 'Segmentos', icono: <Icono d={ICONO_SEGMENTOS} /> },
+    ],
+  },
+  {
+    titulo: 'CRM',
+    items: [
       { ruta: '/crm', etiqueta: 'Oportunidades', icono: <Icono d={ICONO_EMBUDO} /> },
     ],
   },

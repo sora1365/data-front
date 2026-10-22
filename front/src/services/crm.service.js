@@ -35,5 +35,12 @@ export const moverEtapa = (id, etapa, indice) =>
 export const archivarOportunidad = id =>
   api.post(`/crm/oportunidades/${id}/archivar`, null, firma()).then(r => r.data)
 
+/** Qué ofrecerle a este sujeto: lo responde el gestor comercial, vía el CRM. */
+export const productosSugeridos = (tipo, clave) =>
+  api.get(`/crm/sugerencias/${tipo}/${encodeURIComponent(clave)}`).then(r => r.data)
+
+export const listarVentas = params =>
+  api.get('/crm/ventas', { params: limpiar(params) }).then(r => r.data)
+
 export const crmDeSujeto = (tipo, clave) =>
   api.get(`/crm/sujeto/${tipo}/${encodeURIComponent(clave)}`).then(r => r.data)

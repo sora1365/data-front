@@ -47,6 +47,41 @@ export function estadoAlAbrir(estadoActual: EstadoComercial | null): EstadoComer
   return 'en_gestion';
 }
 
+export type EstadoVenta = 'pendiente_facturacion' | 'facturada' | 'cobrada' | 'anulada';
+
+/**
+ * Si se puede sacar una oportunidad de «ganada».
+ *
+ * Mientras la venta sólo está pendiente de facturar, rectificar es gratis: no
+ * ha salido nada al mundo. En cuanto el contable emitió la factura deja de
+ * serlo —existe un documento con efectos tributarios—, y un cambio de etapa en
+ * el CRM no puede fingir que no pasó. A partir de ahí la corrección es una nota
+ * de crédito en el contable, no un arrastre de tarjeta.
+ *
+ * Una venta anulada no bloquea: ya se deshizo por el camino bueno.
+ */
+export function puedeDesgalardonar(estadoVenta: EstadoVenta | null): boolean {
+  return estadoVenta === null || estadoVenta === 'pendiente_facturacion' || estadoVenta === 'anulada';
+}
+
+/**
+ * Qué transiciones de la venta admite el módulo contable.
+ *
+ * Es una máquina de estados pequeña y explícita porque la alternativa —aceptar
+ * cualquier `estado` que llegue por el cuerpo— deja marcar como cobrada una
+ * venta que nadie facturó, y entonces el pendiente de cobro miente.
+ */
+const TRANSICIONES: Record<EstadoVenta, EstadoVenta[]> = {
+  pendiente_facturacion: ['facturada', 'anulada'],
+  facturada: ['cobrada', 'anulada'],
+  cobrada: [],
+  anulada: [],
+};
+
+export function puedePasarA(desde: EstadoVenta, hasta: EstadoVenta): boolean {
+  return TRANSICIONES[desde]?.includes(hasta) ?? false;
+}
+
 /** Una etapa con las oportunidades que le tocan y lo que suman. */
 export interface ColumnaTablero<T> {
   codigo: string;

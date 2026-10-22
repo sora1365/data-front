@@ -128,3 +128,62 @@ fantasma con oportunidades que no vería nadie.
 Contactos, notas, tareas e interacciones **tienen tabla pero no endpoints de
 escritura**: la ficha los muestra y el historial se llena solo con los cambios
 de etapa. Es la siguiente entrega, junto con la agenda y `/crm/embudo`.
+
+## El CRM y el gestor comercial son dos módulos, no uno
+
+Es la regla que ordena todo lo de arriba: **nada del CRM vive dentro del gestor
+comercial**. Son dos herramientas con dueños y ritmos distintos que se mandan
+información por fronteras explícitas, y en el menú aparecen separadas.
+
+Hay exactamente tres puntos de contacto, y conviene que sigan siendo tres:
+
+| Dirección | Qué cruza | Dónde está |
+|---|---|---|
+| Gestor → CRM | El prospecto: a quién y de qué segmento salió | Botón «Enviar al CRM», que navega a `/crm/nueva` |
+| CRM → Gestor | Qué ofrecerle a este sujeto | `CrmService.sugerencias`, que llama a `SegmentosService.productosPara` |
+| CRM → Gestor | El estado comercial del sujeto | `SegmentosService.marcarEstado` |
+
+El alta de oportunidades **no** se pinta en la pantalla de segmentos aunque sea
+cómodo: en cuanto el gestor sabe qué es un producto, una marca o una etapa, deja
+de poder evolucionar sin romper el CRM. Lo único que viaja es a quién se envía.
+
+Las dos preguntas del CRM al gestor pasan por el servicio del CRM y no por la
+pantalla, para que la frontera esté en un solo sitio.
+
+## El paso al módulo contable
+
+El módulo contable vive fuera de este repositorio. El acuerdo es que **él
+consulta a FRIDAY**: pregunta qué hay pendiente de facturar y marca lo que va
+emitiendo. Así FRIDAY no necesita conocer su API ni decidir qué hacer cuando no
+responde.
+
+```
+oportunidad ganada  →  crm_venta (pendiente_facturacion)
+                            │  el contable consulta y marca
+                            ▼
+                       facturada  →  cobrada
+                            └──────→  anulada
+```
+
+| Método | Ruta | Para |
+|---|---|---|
+| `GET`  | `/crm/ventas?estado=pendiente_facturacion` | Lo que falta facturar |
+| `POST` | `/crm/ventas/:id/facturar` | Exige el número del documento |
+| `POST` | `/crm/ventas/:id/cobrar` | Sólo sobre una venta facturada |
+| `POST` | `/crm/ventas/:id/anular` | Antes de cobrar |
+
+Tres reglas que no se ven:
+
+- **Ganar es idempotente.** Mover la tarjeta a «ganada» dos veces no crea dos
+  ventas, porque el `UNIQUE` sobre `oportunidad` y el `ON CONFLICT DO NOTHING`
+  lo impiden. Sin eso se facturaría dos veces.
+- **Una venta facturada no se deshace arrastrando una tarjeta.** Sacar la
+  oportunidad de «ganada» devuelve 409: existe un documento con efectos
+  tributarios y la corrección es una nota de crédito, no un cambio de columna.
+- **No se cobra lo que nadie facturó.** Las transiciones están en
+  `crm.reglas.ts`; aceptar cualquier `estado` del cuerpo dejaría el pendiente de
+  cobro mintiendo.
+
+La consulta devuelve los datos **congelados al ganar** y los **actuales del
+perfil**. Si el cliente cambió de dirección entre la venta y la emisión, quien
+factura tiene que verlo antes de emitir y no cuando le devuelvan el documento.

@@ -1,4 +1,10 @@
-import { estadoAlAbrir, estadoTrasEtapa, repartirEnColumnas } from './crm.reglas';
+import {
+  estadoAlAbrir,
+  estadoTrasEtapa,
+  puedeDesgalardonar,
+  puedePasarA,
+  repartirEnColumnas,
+} from './crm.reglas';
 
 const ETAPAS = [
   { codigo: 'contacto' },
@@ -82,5 +88,52 @@ describe('repartirEnColumnas', () => {
     const columnas = repartirEnColumnas(ETAPAS, [{ etapa: 'etapa_borrada', monto: 10 }]);
     expect(columnas[0].oportunidades).toHaveLength(1);
     expect(columnas.reduce((n, c) => n + c.oportunidades.length, 0)).toBe(1);
+  });
+});
+
+describe('puedeDesgalardonar', () => {
+  it('deja rectificar mientras nadie ha facturado', () => {
+    expect(puedeDesgalardonar(null)).toBe(true);
+    expect(puedeDesgalardonar('pendiente_facturacion')).toBe(true);
+  });
+
+  /**
+   * El caso que justifica la regla: con la factura emitida existe un documento
+   * con efectos tributarios, y arrastrar la tarjeta a otra columna no puede
+   * fingir que no pasó. Se corrige con una nota de crédito en el contable.
+   */
+  it('no deja deshacer una venta ya facturada ni cobrada', () => {
+    expect(puedeDesgalardonar('facturada')).toBe(false);
+    expect(puedeDesgalardonar('cobrada')).toBe(false);
+  });
+
+  it('una venta anulada ya no bloquea', () => {
+    expect(puedeDesgalardonar('anulada')).toBe(true);
+  });
+});
+
+describe('puedePasarA', () => {
+  it('sigue el camino normal de la venta', () => {
+    expect(puedePasarA('pendiente_facturacion', 'facturada')).toBe(true);
+    expect(puedePasarA('facturada', 'cobrada')).toBe(true);
+  });
+
+  it('no deja cobrar lo que nadie facturó', () => {
+    expect(puedePasarA('pendiente_facturacion', 'cobrada')).toBe(false);
+  });
+
+  it('no deja volver atrás', () => {
+    expect(puedePasarA('facturada', 'pendiente_facturacion')).toBe(false);
+    expect(puedePasarA('cobrada', 'facturada')).toBe(false);
+  });
+
+  it('lo anulado y lo cobrado son finales', () => {
+    expect(puedePasarA('anulada', 'facturada')).toBe(false);
+    expect(puedePasarA('cobrada', 'anulada')).toBe(false);
+  });
+
+  it('anular se puede antes de cobrar', () => {
+    expect(puedePasarA('pendiente_facturacion', 'anulada')).toBe(true);
+    expect(puedePasarA('facturada', 'anulada')).toBe(true);
   });
 });

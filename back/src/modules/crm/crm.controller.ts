@@ -85,6 +85,59 @@ export class CrmController {
     return this.crm.porSujeto(tipo, clave);
   }
 
+  /** Qué ofrecerle a este sujeto, según el gestor comercial. */
+  @Get('sugerencias/:tipo/:clave')
+  sugerencias(@Param('tipo') tipo: string, @Param('clave') clave: string) {
+    this.exigirSujeto(tipo, clave);
+    return this.crm.sugerencias(tipo, clave);
+  }
+
+  // ------------------------------------------------ ventas: el módulo contable
+  //
+  // Estos cuatro endpoints son para el módulo contable, no para la pantalla del
+  // CRM. Él pregunta qué hay pendiente de facturar y marca lo que va emitiendo;
+  // el CRM no necesita saber nada de facturación.
+
+  @Get('ventas')
+  ventas(@Query('estado') estado?: string, @Query('marca') marca?: string) {
+    return this.crm.ventas({ estado, marca });
+  }
+
+  @Post('ventas/:id/facturar')
+  @HttpCode(200)
+  facturar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { documento?: string; fecha?: string },
+    @Usuario() usuario: string,
+  ) {
+    if (!body?.documento) {
+      throw new BadRequestException(
+        'Falta el número del documento emitido: una venta facturada sin documento no se puede casar con nada.',
+      );
+    }
+    return this.crm.marcarVenta(id, 'facturada', usuario, body);
+  }
+
+  @Post('ventas/:id/cobrar')
+  @HttpCode(200)
+  cobrar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { fecha?: string },
+    @Usuario() usuario: string,
+  ) {
+    return this.crm.marcarVenta(id, 'cobrada', usuario, body ?? {});
+  }
+
+  @Post('ventas/:id/anular')
+  @HttpCode(200)
+  anular(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { nota?: string },
+    @Usuario() usuario: string,
+  ) {
+    return this.crm.marcarVenta(id, 'anulada', usuario, body ?? {});
+  }
+
   /**
    * El tipo de sujeto se valida contra la misma lista que usa la capa
    * comercial. Un tipo inventado no daría error: devolvería cero filas, que es
