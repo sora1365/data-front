@@ -15,6 +15,7 @@ import { PresenciaModule } from './modules/presencia/presencia.module';
 import { TributarioModule } from './modules/tributario/tributario.module';
 import { ScrapingModule } from './modules/scraping/scraping.module';
 import { CrmModule } from './modules/crm/crm.module';
+import { WhatsappModule } from './modules/crm/whatsapp/whatsapp.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -54,6 +55,7 @@ import { databaseSslConfig } from './database/database-ssl';
     TributarioModule,
     ScrapingModule,
     CrmModule,
+    WhatsappModule,
   ],
   controllers: [AppController],
   providers: [AppService],
