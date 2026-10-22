@@ -46,8 +46,6 @@ const COLUMNAS_OPORTUNIDAD = [
   'expected_closing_date',
   'marca',
   'origen_segmento',
-  'tipo_sujeto',
-  'clave',
 ];
 
 export const RECURSOS: Record<string, Recurso> = {
@@ -79,6 +77,7 @@ export const RECURSOS: Record<string, Recurso> = {
       'contact_ids',
       'archived_at',
       'marca',
+      'company_id',
     ],
     orden: 'index',
     busqueda: ['name', 'description'],
@@ -87,8 +86,7 @@ export const RECURSOS: Record<string, Recurso> = {
       o.monto::float8 AS amount, o.comercial AS sales_id, o.indice AS index,
       o.creada_en AS created_at, o.actualizada_en AS updated_at,
       o.archivada_en AS archived_at, o.cierre_estimado AS expected_closing_date,
-      o.contact_ids, o.marca, o.origen_segmento, o.tipo_sujeto, o.clave,
-      o.tipo_sujeto || ':' || o.clave AS company_id
+      o.contact_ids, o.marca, o.origen_segmento, o.company_id
     `,
   },
 
@@ -112,8 +110,7 @@ export const RECURSOS: Record<string, Recurso> = {
       'last_seen',
       'has_newsletter',
       'avatar',
-      'tipo_sujeto',
-      'clave',
+
     ],
     escribibles: [
       'first_name',
@@ -131,16 +128,10 @@ export const RECURSOS: Record<string, Recurso> = {
       'avatar',
       'first_seen',
       'last_seen',
+      'company_id',
     ],
     orden: 'last_name',
     busqueda: ['first_name', 'last_name', 'title'],
-    select: `
-      c.id, c.first_name, c.last_name, c.title, c.email_jsonb, c.phone_jsonb,
-      c.linkedin_url, c.background, c.gender, c.status, c.tags, c.sales_id,
-      c.first_seen, c.last_seen, c.has_newsletter, c.avatar,
-      c.tipo_sujeto, c.clave,
-      c.tipo_sujeto || ':' || c.clave AS company_id
-    `,
   },
 
   /**
@@ -149,22 +140,78 @@ export const RECURSOS: Record<string, Recurso> = {
    * compañías que la Superintendencia ya publica, con su RUC mal escrito, y
    * acabar con dos listas que no casan.
    */
+  /**
+   * Las empresas son del CRM y se editan como cualquier otra cosa.
+   *
+   * Antes eran el padrón en sólo lectura, que dejaba fuera a cualquier cliente
+   * que no estuviera en él —un proveedor extranjero, una empresa recién
+   * creada, una cartera que alguien suba desde un Excel— y no serviría de nada
+   * a otra empresa que use este CRM.
+   *
+   * `tipo_sujeto` y `clave` enlazan con el padrón **cuando el cliente está en
+   * él**, y ahí es donde el CRM sigue sabiendo más que los demás: actividad,
+   * balances y el estado comercial del gestor. Es opcional a propósito.
+   */
   companies: {
-    tabla: 'perfil_comercial',
+    tabla: 'crm.empresa',
     columnas: [
       'id',
       'name',
       'tax_identifier',
       'sector',
+      'size',
+      'revenue',
+      'description',
       'address',
       'city',
       'state_abbr',
+      'zipcode',
+      'country',
       'phone_number',
       'website',
+      'linkedin_url',
+      'logo',
+      'sales_id',
+      'tipo_sujeto',
+      'clave',
       'created_at',
-      // `country` sale del SELECT como literal, así que no se puede ordenar ni
-      // filtrar por él: no existe como columna en el perfil.
     ],
+    escribibles: [
+      'name',
+      'tax_identifier',
+      'sector',
+      'size',
+      'revenue',
+      'description',
+      'address',
+      'city',
+      'state_abbr',
+      'zipcode',
+      'country',
+      'phone_number',
+      'website',
+      'linkedin_url',
+      'logo',
+      'sales_id',
+      // El enlace con el padrón: es lo que convierte un sujeto de FRIDAY en
+      // ficha del CRM, y lo que permite deshacerlo si se enlazó al equivocado.
+      'tipo_sujeto',
+      'clave',
+    ],
+    orden: 'name',
+    busqueda: ['name', 'tax_identifier'],
+  },
+
+  /**
+   * El padrón, para buscar a quién enlazar.
+   *
+   * No es un recurso del CRM: es la ventana al gestor comercial desde la que
+   * se crea una empresa sin teclear sus datos. De sólo lectura, siempre: lo
+   * que publica la Superintendencia no se corrige desde aquí.
+   */
+  padron: {
+    tabla: 'perfil_comercial',
+    columnas: ['id', 'name', 'tax_identifier', 'sector', 'address', 'city', 'state_abbr'],
     escribibles: [],
     soloLectura: true,
     orden: 'name',
@@ -174,7 +221,7 @@ export const RECURSOS: Record<string, Recurso> = {
       p.nombre AS name, p.ruc AS tax_identifier, p.actividad AS sector,
       p.direccion AS address, p.canton AS city, p.provincia AS state_abbr,
       p.telefono AS phone_number, p.sitio_web AS website,
-      p.fecha_constitucion AS created_at, 'Ecuador'::text AS country
+      p.tipo_sujeto, p.clave, 'Ecuador'::text AS country
     `,
   },
 
@@ -255,9 +302,8 @@ export const RECURSOS: Record<string, Recurso> = {
 /** El alias que usa cada SELECT a medida. */
 export const ALIAS: Record<string, string> = {
   deals: 'o',
-  contacts: 'c',
-  companies: 'p',
   sales: 's',
+  padron: 'p',
 };
 
 /**

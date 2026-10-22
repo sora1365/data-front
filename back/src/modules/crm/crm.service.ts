@@ -37,6 +37,8 @@ const CAMPOS_SUJETO = `
 `;
 
 export interface AbrirOportunidad {
+  /** Opcional: si no llega, se usa el nombre del producto. */
+  nombre?: string;
   tipoSujeto: string;
   clave: string;
   producto: string;
@@ -106,15 +108,17 @@ export class CrmService {
     }
 
     const oportunidades = await this.dataSource.query(
-      `SELECT o.id, o.marca, o.tipo_sujeto, o.clave, o.producto, o.etapa, o.monto,
+      `SELECT o.id, o.marca, o.company_id, emp.tipo_sujeto, emp.clave, emp.name AS empresa,
+              o.producto, o.etapa, o.monto,
               o.comercial, o.origen_segmento, o.cierre_estimado, o.indice, o.creada_en,
               pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
               ${CAMPOS_SUJETO}
          FROM crm.oportunidad o
+         JOIN crm.empresa emp ON emp.id = o.company_id
          JOIN producto pr ON pr.codigo = o.producto
          JOIN crm.marca m ON m.codigo = o.marca
          LEFT JOIN perfil_comercial p
-                ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
+                ON p.tipo_sujeto = emp.tipo_sujeto AND p.clave = emp.clave
         WHERE ${where.join(' AND ')}
         ORDER BY o.indice, o.creada_en`,
       params,
@@ -129,17 +133,19 @@ export class CrmService {
   /** Ficha completa: la oportunidad, su sujeto y lo que se ha hecho con ella. */
   async oportunidad(id: number) {
     const filas = await this.dataSource.query(
-      `SELECT o.*, pr.nombre AS producto_nombre, pr.unidad AS producto_unidad,
+      `SELECT o.*, emp.tipo_sujeto, emp.clave, emp.name AS empresa,
+              pr.nombre AS producto_nombre, pr.unidad AS producto_unidad,
               m.nombre AS marca_nombre, e.nombre AS etapa_nombre,
               e.es_ganada, e.es_perdida, s.nombre AS segmento_nombre,
               ${CAMPOS_SUJETO}
          FROM crm.oportunidad o
+         JOIN crm.empresa emp ON emp.id = o.company_id
          JOIN producto pr ON pr.codigo = o.producto
          JOIN crm.marca m ON m.codigo = o.marca
          JOIN crm.etapa e ON e.codigo = o.etapa
          LEFT JOIN segmento s ON s.codigo = o.origen_segmento
          LEFT JOIN perfil_comercial p
-                ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
+                ON p.tipo_sujeto = emp.tipo_sujeto AND p.clave = emp.clave
         WHERE o.id = $1`,
       [id],
     );
@@ -151,9 +157,9 @@ export class CrmService {
         `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
                 linkedin_url, principal
            FROM crm.contacto
-          WHERE tipo_sujeto = $1 AND clave = $2
+          WHERE company_id = $1
           ORDER BY principal DESC, first_name`,
-        [oportunidad.tipo_sujeto, oportunidad.clave],
+        [oportunidad.company_id],
       ),
       this.dataSource.query(
         `SELECT id, canal, direccion, resultado, texto, ocurrido_en, autor
@@ -190,6 +196,10 @@ export class CrmService {
    *   nadie hace, y por eso cinco unidades llaman al mismo prospecto.
    */
   async abrir(datos: AbrirOportunidad, usuario: string) {
+    // La empresa se busca —o se crea desde el padrón— antes de nada: el sujeto
+    // ya no vive en la oportunidad, y es la empresa la que sabe si hay uno.
+    const empresa = await this.empresaDeSujeto(datos.tipoSujeto, datos.clave, usuario);
+
     const estado = await this.estadoComercial(datos.tipoSujeto, datos.clave);
     if (estado?.estado === 'no_contactar') {
       throw new ConflictException(
@@ -218,14 +228,17 @@ export class CrmService {
     try {
       const res = await this.dataSource.query(
         `INSERT INTO crm.oportunidad
-           (marca, tipo_sujeto, clave, producto, etapa, monto, comercial,
+           (marca, company_id, name, producto, etapa, monto, comercial,
             origen_segmento, origen_lead, cierre_estimado, indice, creada_por)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING id`,
         [
           datos.marca,
-          datos.tipoSujeto,
-          datos.clave,
+          empresa.id,
+          // Atomic muestra el nombre de la oportunidad en cada tarjeta, y una
+          // abierta desde el gestor no lo trae: el producto es lo que se está
+          // vendiendo, así que sirve de nombre hasta que alguien lo cambie.
+          datos.nombre ?? (await this.nombreDeProducto(datos.producto)),
           datos.producto,
           etapa,
           datos.monto ?? null,
@@ -295,7 +308,9 @@ export class CrmService {
   async moverEtapa(id: number, etapa: string, indice: number | null, usuario: string) {
     const actual = (
       await this.dataSource.query(
-        `SELECT tipo_sujeto, clave, etapa FROM crm.oportunidad WHERE id = $1`,
+        `SELECT emp.tipo_sujeto, emp.clave, o.etapa, o.company_id
+           FROM crm.oportunidad o JOIN crm.empresa emp ON emp.id = o.company_id
+          WHERE o.id = $1`,
         [id],
       )
     )[0];
@@ -443,14 +458,16 @@ export class CrmService {
    */
   private async registrarVenta(oportunidad: number, usuario: string) {
     await this.dataSource.query(
+      // Los datos de facturación salen de la ficha de la empresa, no del
+      // perfil: es la empresa la que el comercial corrigió si hacía falta, y
+      // puede no estar en el padrón en absoluto.
       `INSERT INTO crm.venta
-         (oportunidad, marca, tipo_sujeto, clave, producto, monto, comercial,
+         (oportunidad, marca, company_id, tipo_sujeto, clave, producto, monto, comercial,
           ruc, razon_social, direccion, marcada_por)
-       SELECT o.id, o.marca, o.tipo_sujeto, o.clave, o.producto, o.monto, o.comercial,
-              p.ruc, p.nombre, p.direccion, $2
+       SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto, o.monto,
+              o.comercial, emp.tax_identifier, emp.name, emp.address, $2
          FROM crm.oportunidad o
-         LEFT JOIN perfil_comercial p
-                ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
+         JOIN crm.empresa emp ON emp.id = o.company_id
         WHERE o.id = $1
        ON CONFLICT (oportunidad) DO NOTHING`,
       [oportunidad, usuario],
@@ -502,17 +519,20 @@ export class CrmService {
                 pr.nombre AS producto_nombre, e.nombre AS etapa_nombre,
                 e.es_ganada, e.es_perdida
            FROM crm.oportunidad o
+           JOIN crm.empresa emp ON emp.id = o.company_id
            JOIN producto pr ON pr.codigo = o.producto
            JOIN crm.etapa e ON e.codigo = o.etapa
-          WHERE o.tipo_sujeto = $1 AND o.clave = $2
+          WHERE emp.tipo_sujeto = $1 AND emp.clave = $2
           ORDER BY o.archivada_en NULLS FIRST, o.creada_en DESC`,
         [tipoSujeto, clave],
       ),
       this.dataSource.query(
-        `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
-                linkedin_url, principal
-           FROM crm.contacto WHERE tipo_sujeto = $1 AND clave = $2
-          ORDER BY principal DESC, first_name`,
+        `SELECT c.id, c.first_name, c.last_name, c.title, c.email_jsonb, c.phone_jsonb,
+                c.linkedin_url, c.principal
+           FROM crm.contacto c
+           JOIN crm.empresa emp ON emp.id = c.company_id
+          WHERE emp.tipo_sujeto = $1 AND emp.clave = $2
+          ORDER BY c.principal DESC, c.first_name`,
         [tipoSujeto, clave],
       ),
       this.estadoComercial(tipoSujeto, clave),
@@ -521,6 +541,44 @@ export class CrmService {
   }
 
   // ------------------------------------------------------------------- privado
+
+  /**
+   * La ficha de empresa de un sujeto del padrón, creándola si aún no existe.
+   *
+   * Es lo que hace que abrir una oportunidad desde el gestor comercial no
+   * obligue a teclear nada: el sujeto ya tiene nombre, RUC, actividad y
+   * dirección en el perfil, y de ahí sale la ficha. El índice único parcial
+   * sobre `(tipo_sujeto, clave)` es lo que garantiza que dos comerciales
+   * trabajando la misma lista no creen dos fichas del mismo cliente.
+   */
+  private async empresaDeSujeto(tipoSujeto: string, clave: string, usuario: string) {
+    const existentes = await this.dataSource.query(
+      `SELECT id, name FROM crm.empresa WHERE tipo_sujeto = $1 AND clave = $2`,
+      [tipoSujeto, clave],
+    );
+    if (existentes[0]) return existentes[0];
+
+    const res = await this.dataSource.query(
+      `INSERT INTO crm.empresa (name, tax_identifier, sector, address, city, state_abbr,
+                                country, phone_number, website, tipo_sujeto, clave, creado_por)
+       SELECT coalesce(p.nombre, $2), p.ruc, p.actividad, p.direccion, p.canton,
+              p.provincia, 'Ecuador', p.telefono, p.sitio_web, $1, $2, $3
+         FROM (SELECT 1) uno
+         LEFT JOIN perfil_comercial p
+                ON p.tipo_sujeto = $1 AND p.clave = $2
+       RETURNING id, name`,
+      [tipoSujeto, clave, usuario],
+    );
+    return filasDe(res)[0];
+  }
+
+  private async nombreDeProducto(codigo: string): Promise<string> {
+    const filas = await this.dataSource.query(
+      `SELECT nombre FROM producto WHERE codigo = $1`,
+      [codigo],
+    );
+    return filas[0]?.nombre ?? codigo;
+  }
 
   private async estadoComercial(tipoSujeto: string, clave: string) {
     const filas = await this.dataSource.query(

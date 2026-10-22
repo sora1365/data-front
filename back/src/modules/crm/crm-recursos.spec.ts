@@ -20,6 +20,9 @@ const RECURSOS_DEL_CRM = [
   'tasks',
   'sales',
   'tags',
+  // No es un recurso de Atomic: es la ventana al padrón de FRIDAY desde la que
+  // se crea una empresa sin teclear sus datos.
+  'padron',
 ];
 
 describe('recursos del CRM', () => {
@@ -77,19 +80,34 @@ describe('definición de cada recurso', () => {
   });
 
   /**
-   * Las empresas son los 7,1 millones de sujetos de FRIDAY: se leen y no se
-   * tocan. Si alguien les añadiera columnas escribibles, el CRM empezaría a
-   * guardar nombres y RUC a mano sobre una vista materializada que se
-   * reconstruye entera en cada importación.
+   * El padrón es del gestor comercial y se lee desde el CRM, nunca al revés.
+   * Si alguien le añadiera columnas escribibles, el CRM empezaría a corregir a
+   * mano una vista materializada que se reconstruye entera en cada
+   * importación, y el cambio duraría hasta la siguiente carga.
    */
-  it('las empresas son de sólo lectura', () => {
-    expect(RECURSOS.companies.soloLectura).toBe(true);
-    expect(RECURSOS.companies.escribibles).toHaveLength(0);
+  it('el padrón es de sólo lectura', () => {
+    expect(RECURSOS.padron.soloLectura).toBe(true);
+    expect(RECURSOS.padron.escribibles).toHaveLength(0);
+  });
+
+  /**
+   * Las empresas, en cambio, sí se editan: son del CRM. Dejaron de ser el
+   * padrón para que quepan los clientes que no están en él —extranjeros,
+   * recién creados, una cartera subida desde un Excel— y para que el CRM
+   * sirva a una empresa que no sea de Ecuador.
+   */
+  it('las empresas se pueden crear y editar', () => {
+    expect(RECURSOS.companies.soloLectura).toBeFalsy();
+    expect(RECURSOS.companies.escribibles).toContain('name');
+    // El enlace con el padrón es opcional, pero tiene que poder escribirse:
+    // es lo que convierte un sujeto en ficha del CRM.
+    expect(RECURSOS.companies.escribibles).toContain('tipo_sujeto');
+    expect(RECURSOS.companies.escribibles).toContain('clave');
   });
 
   it('todas las tablas del CRM viven en su esquema', () => {
     for (const [recurso, def] of entradas) {
-      if (recurso === 'companies') continue; // el perfil es del gestor comercial
+      if (recurso === 'padron') continue; // el perfil es del gestor comercial
       expect(def.tabla.startsWith('crm.')).toBe(true);
     }
   });

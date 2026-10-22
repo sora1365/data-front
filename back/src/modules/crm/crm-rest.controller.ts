@@ -65,8 +65,9 @@ export class CrmRestController {
     @Param('recurso') recurso: string,
     @Param('id') id: string,
     @Body() cuerpo: Record<string, any>,
+    @Usuario() usuario: string,
   ) {
-    return this.rest.update(recurso, id, cuerpo);
+    return this.rest.update(recurso, id, cuerpo, usuario);
   }
 
   @Delete(':recurso/:id')

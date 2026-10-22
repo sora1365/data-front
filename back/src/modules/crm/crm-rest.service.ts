@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { ALIAS, FILTRO_FIJO, RECURSOS, Recurso } from './crm-recursos';
+import { CrmService } from './crm.service';
 
 export interface ConsultaLista {
   filter?: string;
@@ -25,11 +26,11 @@ const COLUMNA_REAL_DEALS: Record<string, string> = {
 const COLUMNA_REAL_SALES: Record<string, string> = { id: 'usuario' };
 
 /**
- * Las empresas se leen del perfil comercial, cuyas columnas están en español.
- * Sin este mapa, ordenar por `name` falla: `name` es el alias del SELECT y el
+ * El padrón se lee del perfil comercial, cuyas columnas están en español. Sin
+ * este mapa, ordenar por `name` falla: `name` es el alias del SELECT y el
  * ORDER BY se evalúa sobre la tabla, donde la columna se llama `nombre`.
  */
-const COLUMNA_REAL_COMPANIES: Record<string, string> = {
+const COLUMNA_REAL_PADRON: Record<string, string> = {
   id: 'clave',
   name: 'nombre',
   tax_identifier: 'ruc',
@@ -37,9 +38,6 @@ const COLUMNA_REAL_COMPANIES: Record<string, string> = {
   address: 'direccion',
   city: 'canton',
   state_abbr: 'provincia',
-  phone_number: 'telefono',
-  website: 'sitio_web',
-  created_at: 'fecha_constitucion',
 };
 
 /**
@@ -58,7 +56,10 @@ const COLUMNA_REAL_COMPANIES: Record<string, string> = {
  */
 @Injectable()
 export class CrmRestService {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly crm: CrmService,
+  ) {}
 
   private definicion(recurso: string): Recurso {
     const def = RECURSOS[recurso];
@@ -69,7 +70,7 @@ export class CrmRestService {
   private columnaReal(recurso: string, campo: string): string {
     if (recurso === 'deals') return COLUMNA_REAL_DEALS[campo] ?? campo;
     if (recurso === 'sales') return COLUMNA_REAL_SALES[campo] ?? campo;
-    if (recurso === 'companies') return COLUMNA_REAL_COMPANIES[campo] ?? campo;
+    if (recurso === 'padron') return COLUMNA_REAL_PADRON[campo] ?? campo;
     return campo;
   }
 
@@ -110,21 +111,12 @@ export class CrmRestService {
       }
       const columna = `${alias}.${this.columnaReal(recurso, nombre)}`;
 
-      if (nombre === 'company_id') {
-        // Es el sujeto compuesto, no una columna.
-        const [tipo, clave] = String(valor).split(':');
-        params.push(tipo, clave);
-        where.push(`${alias}.tipo_sujeto = $${params.length - 1} AND ${alias}.clave = $${params.length}`);
-        continue;
-      }
-
       /**
-       * El id de una empresa es `tipo:clave`, así que «dame estas empresas»
-       * —lo que hace el tablero para poner el nombre del cliente en cada
-       * tarjeta— no se puede resolver con `id = ANY(...)`: esa columna no
-       * existe. Se compara contra la expresión que lo compone.
+       * El id de un sujeto del padrón es `tipo:clave`, no una columna: es la
+       * única clave compuesta que queda, porque el perfil comercial identifica
+       * así a sus 7,1 millones de filas.
        */
-      if (recurso === 'companies' && nombre === 'id') {
+      if (recurso === 'padron' && nombre === 'id') {
         const lista = Array.isArray(valor) ? valor : [valor];
         params.push(lista.map(String));
         where.push(`(${alias}.tipo_sujeto || ':' || ${alias}.clave) = ANY($${params.length})`);
@@ -199,17 +191,17 @@ export class CrmRestService {
   async getOne(recurso: string, id: string) {
     const def = this.definicion(recurso);
     const alias = this.alias(recurso);
-    const clave = recurso === 'companies' ? null : this.columnaReal(recurso, 'id');
+    const clave = recurso === 'padron' ? null : this.columnaReal(recurso, 'id');
 
-    // Las empresas tienen clave compuesta: el id es `tipo:clave`.
-    if (recurso === 'companies') {
+    // Los sujetos del padrón tienen clave compuesta: el id es `tipo:clave`.
+    if (recurso === 'padron') {
       const [tipo, valor] = String(id).split(':');
       const filas = await this.dataSource.query(
         `SELECT ${def.select} FROM ${def.tabla} ${alias}
           WHERE ${alias}.tipo_sujeto = $1 AND ${alias}.clave = $2`,
         [tipo, valor],
       );
-      if (!filas[0]) throw new NotFoundException(`No existe la empresa ${id}`);
+      if (!filas[0]) throw new NotFoundException(`No existe el sujeto ${id} en el padrón`);
       return filas[0];
     }
 
@@ -239,19 +231,16 @@ export class CrmRestService {
       valores.push(cuerpo[campo]);
     }
 
-    // El sujeto no es un campo escribible suelto: llega como `company_id`.
-    if (cuerpo.company_id && (recurso === 'deals' || recurso === 'contacts')) {
-      const [tipo, clave] = String(cuerpo.company_id).split(':');
-      columnas.push('tipo_sujeto', 'clave');
-      valores.push(tipo, clave);
-    }
-
-    if (recurso === 'deals') {
-      columnas.push('creada_por');
-      valores.push(usuario);
-    }
-    if (recurso === 'contacts') {
-      columnas.push('creado_por');
+    // Quién lo creó. La columna se llama distinto según el género de la cosa
+    // creada —una oportunidad es «creada», un contacto «creado»—, que es la
+    // pega de tener el esquema en español y el API en inglés.
+    const COLUMNA_AUTOR: Record<string, string> = {
+      deals: 'creada_por',
+      contacts: 'creado_por',
+      companies: 'creado_por',
+    };
+    if (COLUMNA_AUTOR[recurso]) {
+      columnas.push(COLUMNA_AUTOR[recurso]);
       valores.push(usuario);
     }
 
@@ -269,7 +258,7 @@ export class CrmRestService {
     return this.getOne(recurso, creado.id);
   }
 
-  async update(recurso: string, id: string, cuerpo: Record<string, any>) {
+  async update(recurso: string, id: string, cuerpo: Record<string, any>, usuario: string) {
     const def = this.definicion(recurso);
     if (def.soloLectura) {
       throw new BadRequestException(
@@ -288,6 +277,35 @@ export class CrmRestService {
 
     if (recurso === 'deals') {
       sets.push('actualizada_en = now()');
+
+      /**
+       * Mover una tarjeta de columna en el CRM es un `PUT` sobre `stage`, y
+       * eso tiene consecuencias fuera del CRM: ganar una venta marca al
+       * cliente como tal en el gestor comercial y crea la fila que el módulo
+       * contable factura.
+       *
+       * Esa lógica vive en `CrmService.moverEtapa` y se delega ahí en vez de
+       * repetirla: con dos copias, arrastrar una tarjeta y usar el endpoint
+       * antiguo harían cosas distintas, y nadie se enteraría hasta que
+       * faltara una factura.
+       */
+      if (cuerpo.stage !== undefined) {
+        const actual = (
+          await this.dataSource.query(`SELECT etapa FROM crm.oportunidad WHERE id = $1`, [id])
+        )[0];
+        if (actual && actual.etapa !== cuerpo.stage) {
+          await this.crm.moverEtapa(
+            Number(id),
+            String(cuerpo.stage),
+            cuerpo.index !== undefined ? Number(cuerpo.index) : null,
+            usuario,
+          );
+          // `moverEtapa` ya guardó la etapa y el índice; aquí sólo queda el
+          // resto de campos que viniera en el mismo cuerpo.
+          const sinEtapa = sets.filter((s) => !/^(etapa|indice) =/.test(s));
+          if (sinEtapa.length <= 1) return this.getOne(recurso, id);
+        }
+      }
 
       // Desarchivar devuelve la oportunidad al tablero, y tiene que entrar al
       // final de su columna: el índice que tenía cuando se archivó ya es de
