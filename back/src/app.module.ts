@@ -17,6 +17,7 @@ import { ScrapingModule } from './modules/scraping/scraping.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { WhatsappModule } from './modules/crm/whatsapp/whatsapp.module';
 import { AgendaModule } from './modules/crm/agenda/agenda.module';
+import { CampaniasModule } from './modules/crm/campanias/campanias.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -58,6 +59,7 @@ import { databaseSslConfig } from './database/database-ssl';
     CrmModule,
     WhatsappModule,
     AgendaModule,
+    CampaniasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
