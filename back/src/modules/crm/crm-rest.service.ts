@@ -228,7 +228,25 @@ export class CrmRestService {
     for (const campo of def.escribibles) {
       if (cuerpo[campo] === undefined) continue;
       columnas.push(this.columnaReal(recurso, campo));
-      valores.push(cuerpo[campo]);
+      valores.push(this.valorParaGuardar(def, campo, cuerpo[campo]));
+    }
+
+    /**
+     * Un contacto nace visto hoy.
+     *
+     * `first_seen` y `last_seen` los pinta la ficha como «añadido el» y
+     * «última actividad». Sin valor, la pantalla no los deja en blanco:
+     * muestra el 31 de diciembre de 1969, que es la fecha cero interpretada
+     * como fecha. Es más barato darles valor al crear que enseñar a cada
+     * pantalla a distinguir «sin fecha» de «fecha vacía».
+     */
+    if (recurso === 'contacts') {
+      for (const campo of ['first_seen', 'last_seen']) {
+        if (cuerpo[campo] === undefined) {
+          columnas.push(campo);
+          valores.push(new Date());
+        }
+      }
     }
 
     // Quién lo creó. La columna se llama distinto según el género de la cosa
@@ -270,7 +288,7 @@ export class CrmRestService {
     const valores: any[] = [];
     for (const campo of def.escribibles) {
       if (cuerpo[campo] === undefined) continue;
-      valores.push(cuerpo[campo]);
+      valores.push(this.valorParaGuardar(def, campo, cuerpo[campo]));
       sets.push(`${this.columnaReal(recurso, campo)} = $${valores.length}`);
     }
     if (sets.length === 0) return this.getOne(recurso, id);
@@ -347,6 +365,46 @@ export class CrmRestService {
       [id],
     );
     return registro;
+  }
+
+  /**
+   * Prepara un valor para escribirlo.
+   *
+   * Lo único que cambia es el `jsonb`: el driver convierte un array de
+   * JavaScript al formato de array de Postgres, que en una columna `jsonb` es
+   * sintaxis inválida y revienta con «invalid input syntax for type json».
+   * Serializarlo es lo que distingue los correos de un contacto —que son
+   * jsonb— de sus etiquetas, que son `bigint[]` de verdad y sí van como array.
+   */
+  private valorParaGuardar(def: Recurso, campo: string, valor: any) {
+    /**
+     * Un desplegable sin elegir manda la cadena vacía, no `null`.
+     *
+     * Para una columna de texto da igual, pero en una referencia o una fecha
+     * Postgres rechaza `''` con un 500 que no dice nada útil: «invalid input
+     * syntax for type bigint». Es lo que pasaba al crear un contacto sin
+     * empresa desde el formulario, mientras que por el API funcionaba.
+     */
+    if (valor === '' && (campo.endsWith('_id') || campo.endsWith('_date') || campo.endsWith('_seen'))) {
+      return null;
+    }
+    if (!def.json?.includes(campo)) return valor;
+
+    /**
+     * Los `_jsonb` de Atomic son listas —los correos de un contacto, sus
+     * teléfonos—, y el formulario manda `null` cuando no se escribió ninguno.
+     * Esas columnas son `NOT NULL DEFAULT '[]'`, porque «sin teléfonos» es una
+     * lista vacía y no la ausencia de lista: así quien las lee itera sin
+     * comprobar nada. Guardar el `null` tal cual viola la restricción y
+     * devuelve un 500 al crear un contacto sin teléfono.
+     *
+     * Los demás campos json (un avatar, un logo) sí pueden ser nulos: ahí
+     * `null` significa que no hay imagen.
+     */
+    if (valor === null || valor === undefined) {
+      return campo.endsWith('_jsonb') ? '[]' : null;
+    }
+    return JSON.stringify(valor);
   }
 
   /** `filter`, `sort` y `range` llegan como JSON en la cadena de consulta. */

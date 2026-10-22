@@ -35,6 +35,16 @@ export const moverEtapa = (id, etapa, indice) =>
 export const archivarOportunidad = id =>
   api.post(`/crm/oportunidades/${id}/archivar`, null, firma()).then(r => r.data)
 
+/**
+ * Anota una conversación en el historial.
+ *
+ * Devuelve la ficha entera, igual que mover de etapa: el historial se recarga
+ * con la respuesta y no con una segunda petición, que es lo que deja la lista
+ * desincronizada cuando la primera falla a medias.
+ */
+export const registrarInteraccion = (id, datos) =>
+  api.post(`/crm/oportunidades/${id}/interaccion`, datos, firma()).then(r => r.data)
+
 /** Qué ofrecerle a este sujeto: lo responde el gestor comercial, vía el CRM. */
 export const productosSugeridos = (tipo, clave) =>
   api.get(`/crm/sugerencias/${tipo}/${encodeURIComponent(clave)}`).then(r => r.data)

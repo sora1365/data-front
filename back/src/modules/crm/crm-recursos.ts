@@ -27,6 +27,16 @@ export interface Recurso {
   soloLectura?: boolean;
   /** SELECT a medida, cuando la tabla no basta. */
   select?: string;
+  /**
+   * Columnas `jsonb`, que hay que serializar antes de escribirlas.
+   *
+   * El driver de Postgres convierte un array de JavaScript al formato de array
+   * de Postgres —`{uno,dos}`—, que para una columna `jsonb` es sintaxis
+   * inválida. Un `bigint[]` de verdad, en cambio, sí se escribe así, por lo
+   * que no basta con mirar si el valor es un array: hay que saber qué es la
+   * columna. Por eso se declara aquí y no se adivina.
+   */
+  json?: string[];
 }
 
 const COLUMNAS_OPORTUNIDAD = [
@@ -92,6 +102,7 @@ export const RECURSOS: Record<string, Recurso> = {
 
   contacts: {
     tabla: 'crm.contacto',
+    json: ['email_jsonb', 'phone_jsonb', 'avatar'],
     columnas: [
       'id',
       'first_name',
@@ -154,6 +165,7 @@ export const RECURSOS: Record<string, Recurso> = {
    */
   companies: {
     tabla: 'crm.empresa',
+    json: ['logo'],
     columnas: [
       'id',
       'name',
@@ -261,6 +273,7 @@ export const RECURSOS: Record<string, Recurso> = {
 
   sales: {
     tabla: 'crm.comercial',
+    json: ['avatar'],
     columnas: [
       'id',
       'first_name',
@@ -284,6 +297,7 @@ export const RECURSOS: Record<string, Recurso> = {
 
   contact_notes: {
     tabla: 'crm.nota',
+    json: ['attachments'],
     columnas: ['id', 'contact_id', 'deal_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     escribibles: ['contact_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     orden: 'date',
@@ -292,6 +306,7 @@ export const RECURSOS: Record<string, Recurso> = {
 
   deal_notes: {
     tabla: 'crm.nota',
+    json: ['attachments'],
     columnas: ['id', 'contact_id', 'deal_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     escribibles: ['deal_id', 'text', 'date', 'sales_id', 'attachments'],
     orden: 'date',

@@ -119,3 +119,76 @@ export function repartirEnColumnas<
     };
   });
 }
+
+// --------------------------------------------------------------- interacciones
+
+/**
+ * El canal con el que el sistema firma lo que hace él.
+ *
+ * `registrarInteraccionDeEtapa` escribe con este canal cuando una tarjeta se
+ * mueve. Nadie puede escribirlo a mano: si se pudiera, cualquiera podría
+ * fabricar un «de propuesta a ganada» que nunca pasó, y el historial dejaría
+ * de servir precisamente para lo que se guarda —reconstruir qué ocurrió sin
+ * tener que creerle a nadie.
+ */
+export const CANAL_SISTEMA = 'sistema';
+
+/**
+ * Por dónde se habló con el cliente.
+ *
+ * Es una lista blanca y no un `CHECK` en la tabla a propósito. WhatsApp y
+ * correo van a entrar solos, desde la integración y no desde un formulario, y
+ * cada canal nuevo sería una migración con `ALTER TABLE` sobre una tabla que
+ * sólo crece. Aquí es una línea.
+ *
+ * Lo que no es negociable es que sea cerrada: con texto libre, «llamada»,
+ * «Llamada», «tel» y «telefónica» son cuatro canales distintos, y la pregunta
+ * de por dónde entran las ventas deja de tener respuesta.
+ */
+export const CANALES = [
+  'llamada',
+  'whatsapp',
+  'correo',
+  'reunion',
+  'visita',
+  'otro',
+] as const;
+
+export type Canal = (typeof CANALES)[number];
+
+export type Direccion = 'entrante' | 'saliente';
+
+export const DIRECCIONES: Direccion[] = ['entrante', 'saliente'];
+
+/**
+ * Si una persona puede anotar una interacción con este canal.
+ *
+ * Deja fuera `sistema` aunque llegue bien escrito: el canal del sistema no se
+ * teclea.
+ */
+export function esCanalDeMano(canal: unknown): canal is Canal {
+  return typeof canal === 'string' && (CANALES as readonly string[]).includes(canal);
+}
+
+export function esDireccion(direccion: unknown): direccion is Direccion {
+  return typeof direccion === 'string' && DIRECCIONES.includes(direccion as Direccion);
+}
+
+/**
+ * Hasta cuándo se admite la fecha de una interacción.
+ *
+ * Anotar hacia atrás es el caso normal: se llama el viernes y se apunta el
+ * lunes. Hacia adelante no, porque una llamada que todavía no ha ocurrido no
+ * es historial sino una tarea, que tiene su propia tabla con `due_date`. Si se
+ * admitiera, el historial de una venta parada enseñaría actividad futura y
+ * «¿desde cuándo no se le llama?» pasaría a contestarse con una llamada que
+ * nadie hizo.
+ *
+ * El margen de un minuto absorbe el desfase entre el reloj del navegador, que
+ * es quien manda la fecha, y el del servidor, que es quien la juzga.
+ */
+const MARGEN_RELOJ_MS = 60_000;
+
+export function fechaDeInteraccionValida(ocurridoEn: Date, ahora: Date): boolean {
+  return ocurridoEn.getTime() <= ahora.getTime() + MARGEN_RELOJ_MS;
+}

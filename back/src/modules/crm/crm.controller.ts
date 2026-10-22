@@ -11,7 +11,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { Usuario } from '../../common/http/usuario.decorator';
-import { AbrirOportunidad, CrmService } from './crm.service';
+import { AbrirOportunidad, CrmService, RegistrarInteraccion } from './crm.service';
+import {
+  CANALES,
+  CANAL_SISTEMA,
+  DIRECCIONES,
+  esCanalDeMano,
+  esDireccion,
+} from './crm.reglas';
 
 const TIPOS_SUJETO = ['compania', 'persona_natural', 'sociedad_no_supervisada'];
 
@@ -77,6 +84,36 @@ export class CrmController {
   @HttpCode(200)
   archivar(@Param('id', ParseIntPipe) id: number) {
     return this.crm.archivar(id);
+  }
+
+  /**
+   * Anota una conversación en el historial de la venta.
+   *
+   * El canal y la dirección se validan contra la lista blanca de
+   * `crm.reglas.ts` y no contra lo que acepte la tabla. La columna `canal` es
+   * `text` libre a propósito —WhatsApp y correo van a entrar desde la
+   * integración, y cada canal nuevo no debería ser una migración—, así que si
+   * esto no los cerrara, «llamada», «Llamada» y «tel» serían tres canales
+   * distintos y la pregunta de por dónde entran las ventas no tendría
+   * respuesta.
+   */
+  @Post('oportunidades/:id/interaccion')
+  interaccion(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: Partial<RegistrarInteraccion>,
+    @Usuario() usuario: string,
+  ) {
+    if (!esCanalDeMano(body?.canal)) {
+      throw new BadRequestException(
+        `Canal inválido. Usa: ${CANALES.join(', ')}. «${CANAL_SISTEMA}» lo escribe solo el sistema al mover una tarjeta.`,
+      );
+    }
+    if (!esDireccion(body?.direccion)) {
+      throw new BadRequestException(
+        `Falta si la conversación fue entrante o saliente. Usa: ${DIRECCIONES.join(', ')}.`,
+      );
+    }
+    return this.crm.registrarInteraccion(id, body as RegistrarInteraccion, usuario);
   }
 
   @Get('sujeto/:tipo/:clave')

@@ -1,6 +1,10 @@
 import {
+  CANAL_SISTEMA,
+  esCanalDeMano,
+  esDireccion,
   estadoAlAbrir,
   estadoTrasEtapa,
+  fechaDeInteraccionValida,
   puedeDesgalardonar,
   puedePasarA,
   repartirEnColumnas,
@@ -135,5 +139,68 @@ describe('puedePasarA', () => {
   it('anular se puede antes de cobrar', () => {
     expect(puedePasarA('pendiente_facturacion', 'anulada')).toBe(true);
     expect(puedePasarA('facturada', 'anulada')).toBe(true);
+  });
+});
+
+describe('esCanalDeMano', () => {
+  it('acepta los canales por los que habla una persona', () => {
+    expect(esCanalDeMano('llamada')).toBe(true);
+    expect(esCanalDeMano('whatsapp')).toBe(true);
+    expect(esCanalDeMano('visita')).toBe(true);
+  });
+
+  /**
+   * La razón de que esta lista sea cerrada: si se aceptara texto libre, estas
+   * cuatro serían cuatro canales distintos en el informe.
+   */
+  it('rechaza las variantes de grafía del mismo canal', () => {
+    expect(esCanalDeMano('Llamada')).toBe(false);
+    expect(esCanalDeMano('LLAMADA')).toBe(false);
+    expect(esCanalDeMano('tel')).toBe(false);
+    expect(esCanalDeMano('telefónica')).toBe(false);
+  });
+
+  it('no deja escribir a mano el canal del sistema', () => {
+    expect(esCanalDeMano(CANAL_SISTEMA)).toBe(false);
+  });
+
+  it('no se cae con lo que no es texto', () => {
+    expect(esCanalDeMano(undefined)).toBe(false);
+    expect(esCanalDeMano(null)).toBe(false);
+    expect(esCanalDeMano(7)).toBe(false);
+    expect(esCanalDeMano(['llamada'])).toBe(false);
+  });
+});
+
+describe('esDireccion', () => {
+  it('sólo entrante o saliente', () => {
+    expect(esDireccion('entrante')).toBe(true);
+    expect(esDireccion('saliente')).toBe(true);
+    expect(esDireccion('')).toBe(false);
+    expect(esDireccion('ambas')).toBe(false);
+    expect(esDireccion(undefined)).toBe(false);
+  });
+});
+
+describe('fechaDeInteraccionValida', () => {
+  const ahora = new Date('2026-10-22T15:00:00Z');
+
+  it('deja anotar hacia atrás: se llama el viernes y se apunta el lunes', () => {
+    expect(fechaDeInteraccionValida(new Date('2026-10-16T09:00:00Z'), ahora)).toBe(true);
+    expect(fechaDeInteraccionValida(new Date('2020-01-01T00:00:00Z'), ahora)).toBe(true);
+  });
+
+  it('acepta el momento exacto', () => {
+    expect(fechaDeInteraccionValida(new Date(ahora), ahora)).toBe(true);
+  });
+
+  it('no deja anotar una conversación que todavía no ha pasado', () => {
+    expect(fechaDeInteraccionValida(new Date('2026-10-23T09:00:00Z'), ahora)).toBe(false);
+  });
+
+  /** El reloj del navegador manda la fecha y el del servidor la juzga. */
+  it('tolera el desfase entre los dos relojes', () => {
+    expect(fechaDeInteraccionValida(new Date('2026-10-22T15:00:30Z'), ahora)).toBe(true);
+    expect(fechaDeInteraccionValida(new Date('2026-10-22T15:05:00Z'), ahora)).toBe(false);
   });
 });

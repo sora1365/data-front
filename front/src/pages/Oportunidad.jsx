@@ -6,6 +6,7 @@ import {
   moverEtapa,
   obtenerCatalogos,
   obtenerOportunidad,
+  registrarInteraccion,
 } from '../services/crm.service'
 import './Oportunidad.css'
 
@@ -16,6 +17,52 @@ const dinero = v =>
 
 const fecha = f => (f ? new Date(f).toLocaleDateString('es-EC') : '—')
 const fechaHora = f => (f ? new Date(f).toLocaleString('es-EC') : '—')
+
+/** El nombre de un contacto, que la tabla guarda en dos columnas. */
+const nombreContacto = c => [c.first_name, c.last_name].filter(Boolean).join(' ')
+
+/** El canal con el que firma el servidor lo que hace él, no una persona. */
+const CANAL_SISTEMA = 'sistema'
+
+const esDelSistema = i => i.canal === CANAL_SISTEMA
+
+/**
+ * Lo que dice una fila del historial.
+ *
+ * En lo que anota una persona el resultado va destacado y delante del relato:
+ * muchas veces —«no contesta»— es lo único que escribió, y si sólo se pintara
+ * el texto la fila saldría vacía.
+ *
+ * En lo que escribe el sistema, el resultado es su código interno
+ * (`cambio_etapa`), que no se le enseña a nadie: ahí basta el texto.
+ */
+function Detalle({ interaccion: i }) {
+  if (esDelSistema(i)) return <span>{i.texto}</span>
+  return (
+    <span>
+      {i.resultado && <strong>{i.resultado}</strong>}
+      {i.resultado && i.texto && ' · '}
+      {i.texto}
+    </span>
+  )
+}
+
+/**
+ * El formulario de anotar, en blanco.
+ *
+ * `llamada` y `saliente` de serie porque es el caso que se repite todo el día.
+ * La fecha se queda vacía y el servidor pone la de ahora: lo normal es anotar
+ * justo después de colgar, y obligar a rellenarla sería teclear la hora actual
+ * veinte veces al día.
+ */
+const ANOTACION_VACIA = {
+  canal: 'llamada',
+  direccion: 'saliente',
+  contacto: '',
+  resultado: '',
+  texto: '',
+  ocurridoEn: '',
+}
 
 /**
  * Ficha de una oportunidad.
@@ -30,9 +77,11 @@ export default function Oportunidad() {
   const { id } = useParams()
   const [dato, setDato] = useState(null)
   const [etapas, setEtapas] = useState([])
+  const [canales, setCanales] = useState([])
   const [error, setError] = useState(null)
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [anotacion, setAnotacion] = useState(ANOTACION_VACIA)
 
   const cargar = useCallback(async () => {
     try {
@@ -48,7 +97,10 @@ export default function Oportunidad() {
   useEffect(() => {
     cargar()
     obtenerCatalogos()
-      .then(c => setEtapas(c.etapas))
+      .then(c => {
+        setEtapas(c.etapas)
+        setCanales(c.canales ?? [])
+      })
       .catch(() => {})
   }, [cargar])
 
@@ -68,6 +120,36 @@ export default function Oportunidad() {
     try {
       setGuardando(true)
       setDato(await editarOportunidad(id, { monto: monto === '' ? null : Number(monto) }))
+      setError(null)
+    } catch (e) {
+      setError(e?.response?.data?.message ?? e.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  /**
+   * Anota la conversación y limpia el formulario.
+   *
+   * Los campos vacíos no se mandan: el servidor distingue «no se escribió
+   * resultado» de «el resultado es cadena vacía», y mandar la fecha en blanco
+   * le haría rechazar la anotación por fecha ilegible en vez de poner la de
+   * ahora, que es lo que quiere decir dejarla vacía.
+   */
+  const anotar = async e => {
+    e.preventDefault()
+    try {
+      setGuardando(true)
+      const cuerpo = { canal: anotacion.canal, direccion: anotacion.direccion }
+      if (anotacion.contacto) cuerpo.contacto = Number(anotacion.contacto)
+      if (anotacion.resultado.trim()) cuerpo.resultado = anotacion.resultado
+      if (anotacion.texto.trim()) cuerpo.texto = anotacion.texto
+      // `datetime-local` da «2026-10-22T09:30», sin zona. Se manda tal cual y
+      // el navegador ya lo interpretó en la del usuario al componerlo.
+      if (anotacion.ocurridoEn) cuerpo.ocurridoEn = new Date(anotacion.ocurridoEn).toISOString()
+
+      setDato(await registrarInteraccion(id, cuerpo))
+      setAnotacion(ANOTACION_VACIA)
       setError(null)
     } catch (e) {
       setError(e?.response?.data?.message ?? e.message)
@@ -196,8 +278,8 @@ export default function Oportunidad() {
             <ul className="oportunidad-contactos">
               {dato.contactos.map(c => (
                 <li key={c.id}>
-                  <strong>{c.nombre}</strong>
-                  {c.cargo && <span> · {c.cargo}</span>}
+                  <strong>{nombreContacto(c)}</strong>
+                  {c.title && <span> · {c.title}</span>}
                 </li>
               ))}
             </ul>
@@ -206,15 +288,100 @@ export default function Oportunidad() {
 
         <section className="oportunidad-bloque oportunidad-ancho">
           <h3>Historial</h3>
+
+          {/*
+            Anotar está arriba del historial y no al final: en una venta
+            trabajada la lista es larga, y el formulario al pie obligaría a
+            bajar hasta el fondo justo después de colgar el teléfono.
+          */}
+          {!dato.archivada_en && (
+            <form className="oportunidad-anotar" onSubmit={anotar}>
+              <div className="oportunidad-anotar-fila">
+                <label>
+                  Canal
+                  <select
+                    value={anotacion.canal}
+                    onChange={e => setAnotacion({ ...anotacion, canal: e.target.value })}
+                  >
+                    {canales.map(c => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Dirección
+                  <select
+                    value={anotacion.direccion}
+                    onChange={e => setAnotacion({ ...anotacion, direccion: e.target.value })}
+                  >
+                    <option value="saliente">la llamamos</option>
+                    <option value="entrante">nos llamó</option>
+                  </select>
+                </label>
+
+                <label>
+                  Con quién
+                  <select
+                    value={anotacion.contacto}
+                    onChange={e => setAnotacion({ ...anotacion, contacto: e.target.value })}
+                  >
+                    <option value="">—</option>
+                    {dato.contactos.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {nombreContacto(c)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Cuándo
+                  <input
+                    type="datetime-local"
+                    value={anotacion.ocurridoEn}
+                    onChange={e => setAnotacion({ ...anotacion, ocurridoEn: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <label className="oportunidad-anotar-resultado">
+                En qué quedó
+                <input
+                  type="text"
+                  placeholder="no contesta · pidió propuesta · lo ve en enero"
+                  value={anotacion.resultado}
+                  onChange={e => setAnotacion({ ...anotacion, resultado: e.target.value })}
+                />
+              </label>
+
+              <textarea
+                rows="3"
+                placeholder="Qué se habló"
+                value={anotacion.texto}
+                onChange={e => setAnotacion({ ...anotacion, texto: e.target.value })}
+              />
+
+              <button type="submit" disabled={guardando}>
+                Anotar
+              </button>
+            </form>
+          )}
+
           {dato.interacciones.length === 0 ? (
             <p className="oportunidad-vacio">Sin movimientos todavía.</p>
           ) : (
             <ul className="oportunidad-historial">
               {dato.interacciones.map(i => (
-                <li key={i.id}>
+                <li key={i.id} className={esDelSistema(i) ? 'es-sistema' : undefined}>
                   <span className="oportunidad-historial-fecha">{fechaHora(i.ocurrido_en)}</span>
-                  <span className="oportunidad-historial-canal">{i.canal}</span>
-                  <span>{i.texto}</span>
+                  <span className="oportunidad-historial-canal">
+                    {i.canal}
+                    {!esDelSistema(i) && (i.direccion === 'entrante' ? ' ←' : ' →')}
+                  </span>
+                  <Detalle interaccion={i} />
                   <span className="oportunidad-historial-autor">{i.autor}</span>
                 </li>
               ))}

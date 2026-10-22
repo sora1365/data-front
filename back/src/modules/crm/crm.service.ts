@@ -1,11 +1,18 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { SegmentosService } from '../segmentos/segmentos.service';
 import {
+  CANALES,
   EstadoVenta,
   estadoAlAbrir,
   estadoTrasEtapa,
+  fechaDeInteraccionValida,
   puedeDesgalardonar,
   puedePasarA,
   repartirEnColumnas,
@@ -20,6 +27,20 @@ import {
  */
 function filasDe(res: unknown): any[] {
   return Array.isArray(res) && Array.isArray(res[0]) ? res[0] : (res as any[]);
+}
+
+/**
+ * Un texto escrito por una persona, o `null` si no escribió nada.
+ *
+ * No usa `nullify` de `common/text`: ese está hecho para lo que llega en un
+ * archivo de la Superintendencia, donde «N/A» significa vacío y los saltos de
+ * línea son basura. Esto lo teclea alguien en un formulario, y colapsarle los
+ * saltos de línea convertiría el resumen de una reunión en un párrafo.
+ */
+function textoONulo(valor: string | null | undefined): string | null {
+  if (valor === null || valor === undefined) return null;
+  const limpio = String(valor).trim();
+  return limpio === '' ? null : limpio;
 }
 
 /**
@@ -51,6 +72,19 @@ export interface AbrirOportunidad {
   etapa?: string | null;
 }
 
+/** Una conversación que ya ocurrió, para anotarla en el historial. */
+export interface RegistrarInteraccion {
+  canal: string;
+  direccion: string;
+  /** Qué salió de ahí: «no contesta», «pidió propuesta», «lo ve en enero». */
+  resultado?: string | null;
+  texto?: string | null;
+  /** Con quién se habló, cuando se sabe. Tiene que ser de este cliente. */
+  contacto?: number | null;
+  /** Cuándo fue. Si no llega, ahora: lo normal es anotar justo después. */
+  ocurridoEn?: string | null;
+}
+
 @Injectable()
 export class CrmService {
   constructor(
@@ -74,7 +108,12 @@ export class CrmService {
       ),
       this.dataSource.query(`SELECT id, name AS nombre, color FROM crm.etiqueta ORDER BY name`),
     ]);
-    return { marcas, etapas, comerciales, etiquetas };
+    // Los canales no son una tabla: son la lista blanca con la que el
+    // controlador valida lo que llega. Viajan aquí para que el desplegable de
+    // la ficha salga de la misma lista que decide si se acepta, y no de una
+    // copia en el JavaScript que se olvidaría de actualizar el día que entre
+    // un canal nuevo.
+    return { marcas, etapas, comerciales, etiquetas, canales: CANALES };
   }
 
   // -------------------------------------------------------------------- tablero
@@ -481,6 +520,89 @@ export class CrmService {
       [id],
     );
     return this.oportunidad(id);
+  }
+
+  // --------------------------------------------------------------- historial
+
+  /**
+   * Anota a mano lo que pasó con el cliente.
+   *
+   * Hasta aquí el historial sólo se llenaba solo, con los cambios de etapa, y
+   * eso contesta «desde cuándo está parada» pero no «qué dijo cuando se le
+   * llamó». Esto es lo segundo: una llamada, un WhatsApp, una visita.
+   *
+   * Va a `crm.interaccion` y no a `crm.nota` aunque las dos guarden texto. Una
+   * nota es lo que alguien escribe sobre la venta; una interacción es un
+   * contacto que ocurrió, con canal, dirección y hora. Es la distinción que
+   * permite preguntar por dónde entran las ventas y cuánto se tarda en
+   * responder, y es la tabla en la que después caen WhatsApp y correo solos:
+   * si las llamadas nacieran como notas habría que migrarlas el primer día de
+   * la integración.
+   */
+  async registrarInteraccion(
+    oportunidad: number,
+    entrada: RegistrarInteraccion,
+    usuario: string,
+  ) {
+    const ocurridoEn = entrada.ocurridoEn ? new Date(entrada.ocurridoEn) : new Date();
+    if (Number.isNaN(ocurridoEn.getTime())) {
+      throw new BadRequestException('La fecha de la interacción no se entiende.');
+    }
+    if (!fechaDeInteraccionValida(ocurridoEn, new Date())) {
+      throw new BadRequestException(
+        'Esa interacción está en el futuro. Lo que todavía no ha pasado es una tarea, no historial.',
+      );
+    }
+
+    // La oportunidad se comprueba antes de insertar porque la alternativa es
+    // que el 23503 de la clave foránea salga como un 500: el cliente recibiría
+    // «error interno» cuando lo que pasó es que esa venta no existe.
+    const suya = await this.dataSource.query(
+      `SELECT company_id FROM crm.oportunidad WHERE id = $1`,
+      [oportunidad],
+    );
+    if (suya.length === 0) {
+      throw new NotFoundException(`No existe la oportunidad ${oportunidad}`);
+    }
+
+    // Un contacto de otra empresa en el historial de esta no da ningún error
+    // —la columna sólo exige que el contacto exista— y deja la conversación
+    // colgada del cliente equivocado, donde nadie la va a buscar.
+    if (entrada.contacto != null) {
+      const esDeEsteCliente = await this.dataSource.query(
+        `SELECT 1 FROM crm.contacto WHERE id = $1 AND company_id = $2`,
+        [entrada.contacto, suya[0].company_id],
+      );
+      if (esDeEsteCliente.length === 0) {
+        throw new BadRequestException(
+          'Ese contacto no es de este cliente: una conversación colgada de otra empresa no la encuentra nadie.',
+        );
+      }
+    }
+
+    // Quien anota firma, y si es su primera firma se da de alta solo: es la
+    // misma regla que al abrir una oportunidad. Mientras no haya
+    // autenticación, exigir un alta previa convertiría la primera llamada de
+    // cada persona en un error de clave foránea.
+    await this.asegurarComercial(usuario, true);
+
+    await this.dataSource.query(
+      `INSERT INTO crm.interaccion
+         (canal, direccion, oportunidad, contacto, resultado, texto, ocurrido_en, autor)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        entrada.canal,
+        entrada.direccion,
+        oportunidad,
+        entrada.contacto ?? null,
+        textoONulo(entrada.resultado),
+        textoONulo(entrada.texto),
+        ocurridoEn,
+        usuario,
+      ],
+    );
+
+    return this.oportunidad(oportunidad);
   }
 
   // -------------------------------------------------- frontera con el gestor
