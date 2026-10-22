@@ -16,7 +16,7 @@
     {
       "name": "crm",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:demo", "--prefix", "crm"],
+      "runtimeArgs": ["run", "dev", "--prefix", "crm"],
       "port": 3002
     }
   ]

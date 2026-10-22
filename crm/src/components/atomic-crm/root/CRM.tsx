@@ -70,6 +70,12 @@ export type CRMProps = {
   store?: CoreAdminProps["store"];
   dashboard?: DashboardComponent;
   layout?: LayoutComponent;
+  /**
+   * La pantalla de entrada. FRIDAY pasa la suya, que pide sólo el nombre con
+   * el que se firman los cambios: no hay contraseñas que comprobar, y la de
+   * serie pide un correo y una clave que no se usan contra nada.
+   */
+  loginPage?: CoreAdminProps["loginPage"];
 } & Partial<ConfigurationContextValue>;
 
 /**

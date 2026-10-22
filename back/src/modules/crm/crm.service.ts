@@ -68,9 +68,9 @@ export class CrmService {
         `SELECT codigo, nombre, orden, es_ganada, es_perdida FROM crm_etapa ORDER BY orden`,
       ),
       this.dataSource.query(
-        `SELECT usuario, nombre FROM crm_comercial WHERE activo ORDER BY nombre`,
+        `SELECT usuario, first_name AS nombre FROM crm_comercial WHERE NOT disabled ORDER BY first_name`,
       ),
-      this.dataSource.query(`SELECT codigo, nombre, color FROM crm_etiqueta ORDER BY nombre`),
+      this.dataSource.query(`SELECT id, name AS nombre, color FROM crm_etiqueta ORDER BY name`),
     ]);
     return { marcas, etapas, comerciales, etiquetas };
   }
@@ -148,10 +148,11 @@ export class CrmService {
 
     const [contactos, interacciones, notas, tareas] = await Promise.all([
       this.dataSource.query(
-        `SELECT id, nombre, cargo, correos, telefonos, linkedin, principal
+        `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
+                linkedin_url, principal
            FROM crm_contacto
           WHERE tipo_sujeto = $1 AND clave = $2
-          ORDER BY principal DESC, nombre`,
+          ORDER BY principal DESC, first_name`,
         [oportunidad.tipo_sujeto, oportunidad.clave],
       ),
       this.dataSource.query(
@@ -160,13 +161,13 @@ export class CrmService {
         [id],
       ),
       this.dataSource.query(
-        `SELECT id, texto, estado, fecha, autor
-           FROM crm_nota WHERE oportunidad = $1 ORDER BY fecha DESC`,
+        `SELECT id, text, status, date, sales_id
+           FROM crm_nota WHERE deal_id = $1 ORDER BY date DESC`,
         [id],
       ),
       this.dataSource.query(
-        `SELECT id, texto, tipo, vence, hecha_en, responsable
-           FROM crm_tarea WHERE oportunidad = $1 ORDER BY hecha_en NULLS FIRST, vence`,
+        `SELECT id, text, type, due_date, done_date, sales_id
+           FROM crm_tarea WHERE deal_id = $1 ORDER BY done_date NULLS FIRST, due_date`,
         [id],
       ),
     ]);
@@ -508,9 +509,10 @@ export class CrmService {
         [tipoSujeto, clave],
       ),
       this.dataSource.query(
-        `SELECT id, nombre, cargo, correos, telefonos, linkedin, principal
+        `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
+                linkedin_url, principal
            FROM crm_contacto WHERE tipo_sujeto = $1 AND clave = $2
-          ORDER BY principal DESC, nombre`,
+          ORDER BY principal DESC, first_name`,
         [tipoSujeto, clave],
       ),
       this.estadoComercial(tipoSujeto, clave),
@@ -543,14 +545,14 @@ export class CrmService {
   private async asegurarComercial(usuario: string, esQuienFirma: boolean) {
     if (esQuienFirma) {
       await this.dataSource.query(
-        `INSERT INTO crm_comercial (usuario, nombre) VALUES ($1, $1)
+        `INSERT INTO crm_comercial (usuario, first_name) VALUES ($1, $1)
          ON CONFLICT (usuario) DO NOTHING`,
         [usuario],
       );
       return;
     }
     const existe = await this.dataSource.query(
-      `SELECT 1 FROM crm_comercial WHERE usuario = $1 AND activo`,
+      `SELECT 1 FROM crm_comercial WHERE usuario = $1 AND NOT disabled`,
       [usuario],
     );
     if (existe.length === 0) {

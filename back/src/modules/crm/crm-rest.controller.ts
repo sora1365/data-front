@@ -1,0 +1,76 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { Usuario } from '../../common/http/usuario.decorator';
+import { CrmRestService } from './crm-rest.service';
+
+/**
+ * El API que consumen las pantallas del CRM.
+ *
+ * Vive bajo `/crm/api` y no bajo `/crm` para no mezclarse con los endpoints
+ * que ya tenía el módulo —tablero, ventas, enganche con el gestor—, que son
+ * de FRIDAY y no de react-admin. Son dos contratos distintos sobre las mismas
+ * tablas, y juntarlos haría que cambiar uno rompiera el otro.
+ *
+ * El total va en la cabecera `Content-Range`, que es donde lo busca
+ * react-admin, y se expone con `Access-Control-Expose-Headers` porque el CRM
+ * corre en otro puerto: sin eso el navegador se la oculta al JavaScript y
+ * todas las listas salen con una sola página.
+ */
+@Controller('crm/api')
+export class CrmRestController {
+  constructor(private readonly rest: CrmRestService) {}
+
+  @Get(':recurso')
+  async getList(
+    @Param('recurso') recurso: string,
+    @Query('filter') filter: string,
+    @Query('sort') sort: string,
+    @Query('range') range: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { data, total } = await this.rest.getList(recurso, { filter, sort, range });
+    const [desde] = range ? JSON.parse(range) : [0];
+    const hasta = Number(desde) + data.length - 1;
+    res.setHeader('Content-Range', `${recurso} ${desde}-${Math.max(hasta, 0)}/${total}`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range');
+    return data;
+  }
+
+  @Get(':recurso/:id')
+  getOne(@Param('recurso') recurso: string, @Param('id') id: string) {
+    return this.rest.getOne(recurso, id);
+  }
+
+  @Post(':recurso')
+  create(
+    @Param('recurso') recurso: string,
+    @Body() cuerpo: Record<string, any>,
+    @Usuario() usuario: string,
+  ) {
+    return this.rest.create(recurso, cuerpo, usuario);
+  }
+
+  @Put(':recurso/:id')
+  update(
+    @Param('recurso') recurso: string,
+    @Param('id') id: string,
+    @Body() cuerpo: Record<string, any>,
+  ) {
+    return this.rest.update(recurso, id, cuerpo);
+  }
+
+  @Delete(':recurso/:id')
+  remove(@Param('recurso') recurso: string, @Param('id') id: string) {
+    return this.rest.remove(recurso, id);
+  }
+}

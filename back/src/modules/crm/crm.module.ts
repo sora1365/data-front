@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { SegmentosModule } from '../segmentos/segmentos.module';
 import { CrmController } from './crm.controller';
+import { CrmRestController } from './crm-rest.controller';
+import { CrmRestService } from './crm-rest.service';
 import { CrmService } from './crm.service';
 
 /**
@@ -10,8 +12,8 @@ import { CrmService } from './crm.service';
  */
 @Module({
   imports: [SegmentosModule],
-  controllers: [CrmController],
-  providers: [CrmService],
+  controllers: [CrmController, CrmRestController],
+  providers: [CrmService, CrmRestService],
   exports: [CrmService],
 })
 export class CrmModule {}
