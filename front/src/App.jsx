@@ -18,6 +18,8 @@ import ImportarTurismo from './pages/ImportarTurismo'
 import ImportarCatastros from './pages/ImportarCatastros'
 import Importaciones from './pages/Importaciones'
 import Segmentos from './pages/Segmentos'
+import Crm from './pages/Crm'
+import Oportunidad from './pages/Oportunidad'
 import Scraping from './pages/Scraping'
 import Utilidades from './pages/Utilidades'
 import { RUTA_INICIAL } from './routes'
@@ -58,6 +60,8 @@ function App() {
           />
           <Route path="/padron/sociedades" element={<PadronLista tipo="sociedades" />} />
           <Route path="/segmentos" element={<Segmentos />} />
+          <Route path="/crm" element={<Crm />} />
+          <Route path="/crm/oportunidades/:id" element={<Oportunidad />} />
           <Route path="/scraping" element={<Scraping />} />
           <Route path="/importar/companias" element={<ImportarCompanias />} />
           <Route path="/importar/balances" element={<ImportarBalances />} />

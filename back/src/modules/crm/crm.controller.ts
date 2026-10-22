@@ -1,0 +1,99 @@
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { Usuario } from '../../common/http/usuario.decorator';
+import { AbrirOportunidad, CrmService } from './crm.service';
+
+const TIPOS_SUJETO = ['compania', 'persona_natural', 'sociedad_no_supervisada'];
+
+/**
+ * API del CRM.
+ *
+ * Toda escritura va firmada con `X-Usuario`, igual que presencia y scraping: lo
+ * que se anota de un cliente sin saber quién lo anotó no sirve para nada el día
+ * que haya que preguntarle.
+ */
+@Controller('crm')
+export class CrmController {
+  constructor(private readonly crm: CrmService) {}
+
+  @Get('catalogos')
+  catalogos() {
+    return this.crm.catalogos();
+  }
+
+  @Get('tablero')
+  tablero(
+    @Query('comercial') comercial?: string,
+    @Query('marca') marca?: string,
+    @Query('producto') producto?: string,
+  ) {
+    return this.crm.tablero({ comercial, marca, producto });
+  }
+
+  @Get('oportunidades/:id')
+  oportunidad(@Param('id', ParseIntPipe) id: number) {
+    return this.crm.oportunidad(id);
+  }
+
+  @Post('oportunidades')
+  abrir(@Body() body: Partial<AbrirOportunidad>, @Usuario() usuario: string) {
+    this.exigirSujeto(body.tipoSujeto, body.clave);
+    if (!body.producto) {
+      throw new BadRequestException('Falta el producto que se le ofrece.');
+    }
+    if (!body.marca) {
+      throw new BadRequestException('Falta la marca con la que se vende.');
+    }
+    return this.crm.abrir(body as AbrirOportunidad, usuario);
+  }
+
+  @Patch('oportunidades/:id')
+  editar(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<AbrirOportunidad>) {
+    return this.crm.editar(id, body);
+  }
+
+  @Post('oportunidades/:id/etapa')
+  @HttpCode(200)
+  moverEtapa(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { etapa?: string; indice?: number },
+    @Usuario() usuario: string,
+  ) {
+    if (!body?.etapa) throw new BadRequestException('Falta la etapa de destino.');
+    return this.crm.moverEtapa(id, body.etapa, body.indice ?? null, usuario);
+  }
+
+  @Post('oportunidades/:id/archivar')
+  @HttpCode(200)
+  archivar(@Param('id', ParseIntPipe) id: number) {
+    return this.crm.archivar(id);
+  }
+
+  @Get('sujeto/:tipo/:clave')
+  porSujeto(@Param('tipo') tipo: string, @Param('clave') clave: string) {
+    this.exigirSujeto(tipo, clave);
+    return this.crm.porSujeto(tipo, clave);
+  }
+
+  /**
+   * El tipo de sujeto se valida contra la misma lista que usa la capa
+   * comercial. Un tipo inventado no daría error: devolvería cero filas, que es
+   * mucho peor porque parece una respuesta.
+   */
+  private exigirSujeto(tipo?: string, clave?: string) {
+    if (!tipo || !TIPOS_SUJETO.includes(tipo)) {
+      throw new BadRequestException(`Tipo de sujeto inválido. Usa: ${TIPOS_SUJETO.join(', ')}`);
+    }
+    if (!clave) throw new BadRequestException('Falta la clave del sujeto.');
+  }
+}

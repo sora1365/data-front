@@ -1,0 +1,202 @@
+/* Tablero de oportunidades. Todos los colores salen de la paleta de index.css. */
+
+.crm-cabecera {
+  margin-bottom: 1rem;
+}
+
+.crm-seccion {
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.crm h2 {
+  margin: 0 0 0.35rem;
+}
+
+.crm-subtitulo {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  max-width: 70ch;
+}
+
+.crm-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.crm-filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.crm-filtros select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.crm-conteo {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.crm-error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  background: var(--error-light);
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+.crm-vacio {
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-alt);
+  color: var(--text-soft);
+  font-size: 0.85rem;
+  max-width: 70ch;
+}
+
+/* El tablero desborda a lo ancho en vez de comprimir las columnas: una tarjeta
+   estrecha deja de leerse, y el embudo tiene seis etapas. */
+.crm-tablero {
+  display: flex;
+  gap: 0.8rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  align-items: flex-start;
+}
+
+.crm-columna {
+  flex: 0 0 15rem;
+  background: var(--container-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.7rem;
+}
+
+/* Mientras se arrastra encima, la columna se marca. Sin esta señal el soltar es
+   a ciegas y las tarjetas acaban en la etapa de al lado. */
+.crm-columna-destino {
+  border-color: var(--secondary);
+  background: var(--primary-light);
+}
+
+.crm-columna-ganada header h3 {
+  color: var(--success);
+}
+
+.crm-columna-perdida header h3 {
+  color: var(--text-muted);
+}
+
+.crm-columna header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.6rem;
+}
+
+.crm-columna header h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.crm-columna-cifras {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.crm-tarjetas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+}
+
+.crm-tarjeta {
+  padding: 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  cursor: grab;
+}
+
+.crm-tarjeta:hover {
+  border-color: var(--secondary);
+}
+
+.crm-tarjeta:active {
+  cursor: grabbing;
+}
+
+.crm-tarjeta-sujeto {
+  margin: 0 0 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.crm-tarjeta-producto {
+  margin: 0 0 0.45rem;
+  font-size: 0.74rem;
+  color: var(--text-soft);
+}
+
+.crm-tarjeta-pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+}
+
+.crm-tarjeta-monto {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.crm-tarjeta-comercial {
+  color: var(--text-muted);
+}
+
+.crm-tarjeta-ruc {
+  margin: 0.35rem 0 0;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mover de etapa sin arrastrar: la única vía en táctil y con teclado. */
+.crm-tarjeta-etapa {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.3rem;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: var(--surface-alt);
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.crm-tarjeta-etapa:hover {
+  border-color: var(--secondary);
+}

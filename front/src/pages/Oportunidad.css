@@ -1,0 +1,193 @@
+/* Ficha de una oportunidad. Los colores salen de la paleta de index.css. */
+
+.oportunidad-volver {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+.oportunidad-volver a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+.oportunidad-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.oportunidad-cabecera h2 {
+  margin: 0 0 0.25rem;
+}
+
+.oportunidad-sub {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.oportunidad-archivada {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.oportunidad-error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  background: var(--error-light);
+  color: var(--error);
+  font-size: 0.85rem;
+}
+
+.oportunidad-cargando,
+.oportunidad-vacio {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.oportunidad-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.oportunidad-ancho {
+  grid-column: 1 / -1;
+}
+
+.oportunidad-bloque {
+  padding: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.oportunidad-bloque h3 {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+}
+
+.oportunidad-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.oportunidad-campo select,
+.oportunidad-campo input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.oportunidad-monto {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.oportunidad-monto input {
+  flex: 1;
+  min-width: 0;
+}
+
+.oportunidad-monto button,
+.oportunidad-archivar {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  background: var(--secondary);
+  color: var(--surface);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.oportunidad-archivar {
+  margin-top: 0.4rem;
+  background: var(--surface);
+  color: var(--text-soft);
+  border-color: var(--border-color);
+}
+
+.oportunidad-monto button:disabled,
+.oportunidad-archivar:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.oportunidad-datos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.8rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.oportunidad-datos dt {
+  color: var(--text-muted);
+}
+
+.oportunidad-datos dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.oportunidad-aviso {
+  margin: 0.8rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.oportunidad-contactos,
+.oportunidad-historial {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.oportunidad-historial li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.oportunidad-historial li:last-child {
+  border-bottom: none;
+}
+
+.oportunidad-historial-fecha {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.oportunidad-historial-canal {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--secondary-dark);
+  font-size: 0.7rem;
+}
+
+.oportunidad-historial-autor {
+  margin-left: auto;
+  color: var(--text-muted);
+}

@@ -5,9 +5,16 @@ import {
   listarMiembros,
   listarSegmentos,
   marcarEstado,
+  productosPara,
   refrescarPerfil,
   urlCsv,
 } from '../services/segmentos.service'
+import {
+  abrirOportunidad,
+  fijarUsuario,
+  obtenerCatalogos,
+  usuarioActual,
+} from '../services/crm.service'
 import './Segmentos.css'
 
 const num = n => (n ?? 0).toLocaleString('es-EC')
@@ -142,6 +149,7 @@ function Miembros({ codigo }) {
   const [datos, setDatos] = useState(null)
   const [total, setTotal] = useState(0)
   const [error, setError] = useState(null)
+  const [abriendo, setAbriendo] = useState(null)
 
   const cargar = useCallback(async () => {
     setError(null)
@@ -222,6 +230,11 @@ function Miembros({ codigo }) {
                   <td className="der mono">{dinero(d.activos_ult)}</td>
                   <td className="der mono">{dinero(d.activos_prev)}</td>
                   <td className="acciones-fila">
+                    {/* Abrir la oportunidad ya deja al sujeto en gestión, así que
+                        aquí no hace falta marcarlo además a mano. */}
+                    <button type="button" onClick={() => setAbriendo(d)}>
+                      Abrir oportunidad
+                    </button>
                     <button type="button" onClick={() => marcar(d, 'en_gestion')}>
                       En gestión
                     </button>
@@ -242,6 +255,165 @@ function Miembros({ codigo }) {
           </table>
         </div>
       )}
+
+      {abriendo && (
+        <DialogoOportunidad
+          sujeto={abriendo}
+          segmento={codigo}
+          alCerrar={() => setAbriendo(null)}
+          alAbrir={() => {
+            setAbriendo(null)
+            cargar()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Alta de una oportunidad desde la lista de trabajo.
+ *
+ * Los productos que se ofrecen no se eligen de un catálogo entero: se piden a
+ * `GET /segmentos/sujeto/:tipo/:clave`, que ya sabe en qué segmentos cae este
+ * sujeto y qué se le ofrece por eso. Elegir de la lista completa es cómo se
+ * acaba ofreciendo auditoría a quien no la necesita.
+ */
+function DialogoOportunidad({ sujeto, segmento, alCerrar, alAbrir }) {
+  const [productos, setProductos] = useState(null)
+  const [marcas, setMarcas] = useState([])
+  const [form, setForm] = useState({ producto: '', marca: '', monto: '' })
+  const [error, setError] = useState(null)
+  const [enviando, setEnviando] = useState(false)
+  // El backend rechaza toda escritura sin firma. Se pide aquí y no sólo en la
+  // pantalla de rastreo: quien entra directo al CRM no tiene por qué haber
+  // pasado por allí, y el 400 de la cabecera que falta no dice qué hacer.
+  const [usuario, setUsuario] = useState(usuarioActual())
+
+  useEffect(() => {
+    productosPara(sujeto.tipo_sujeto, sujeto.clave)
+      .then(r => {
+        // El endpoint devuelve una fila por segmento *y* producto, así que el
+        // mismo producto llega repetido cuando el sujeto cae en dos segmentos
+        // que lo ofrecen —el caso normal, no la excepción—. Se queda la
+        // primera aparición, que viene ya ordenada por prioridad.
+        const porCodigo = new Map()
+        for (const p of r?.productos ?? r ?? []) {
+          if (!porCodigo.has(p.codigo)) porCodigo.set(p.codigo, p)
+        }
+        const lista = [...porCodigo.values()]
+        setProductos(lista)
+        setForm(f => ({ ...f, producto: lista[0]?.codigo ?? '' }))
+      })
+      .catch(e => setError(e?.response?.data?.message ?? e.message))
+    obtenerCatalogos()
+      .then(c => {
+        setMarcas(c.marcas)
+        setForm(f => ({ ...f, marca: c.marcas[0]?.codigo ?? '' }))
+      })
+      .catch(() => {})
+  }, [sujeto])
+
+  const enviar = async e => {
+    e.preventDefault()
+    if (!usuario.trim()) {
+      setError('Escribe tu usuario: toda acción queda firmada.')
+      return
+    }
+    setEnviando(true)
+    setError(null)
+    try {
+      await abrirOportunidad({
+        tipoSujeto: sujeto.tipo_sujeto,
+        clave: sujeto.clave,
+        producto: form.producto,
+        marca: form.marca,
+        monto: form.monto === '' ? null : Number(form.monto),
+        origenSegmento: segmento,
+      })
+      alAbrir()
+    } catch (e) {
+      setError(e?.response?.data?.message ?? e.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="dialogo-fondo" role="presentation" onClick={alCerrar}>
+      <form className="dialogo" onClick={e => e.stopPropagation()} onSubmit={enviar}>
+        <h4>Abrir oportunidad</h4>
+        <p className="dialogo-sujeto">{sujeto.nombre}</p>
+
+        {error && <p className="error">{error}</p>}
+
+        <label>
+          Producto
+          <select
+            value={form.producto}
+            onChange={e => setForm(f => ({ ...f, producto: e.target.value }))}
+            required
+          >
+            {(productos ?? []).map(p => (
+              <option key={p.codigo} value={p.codigo}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+        {productos && productos.length === 0 && (
+          <p className="dialogo-aviso">
+            Este sujeto no cae en ningún segmento con productos asociados.
+          </p>
+        )}
+
+        <label>
+          Marca
+          <select
+            value={form.marca}
+            onChange={e => setForm(f => ({ ...f, marca: e.target.value }))}
+            required
+          >
+            {marcas.map(m => (
+              <option key={m.codigo} value={m.codigo}>
+                {m.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Monto estimado
+          <input
+            type="number"
+            step="0.01"
+            value={form.monto}
+            placeholder="Opcional"
+            onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
+          />
+        </label>
+
+        <label>
+          Tu usuario
+          <input
+            value={usuario}
+            placeholder="tu nombre"
+            onChange={e => {
+              setUsuario(e.target.value)
+              fijarUsuario(e.target.value)
+            }}
+          />
+        </label>
+
+        <div className="dialogo-acciones">
+          <button type="button" onClick={alCerrar}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={enviando || !form.producto || !form.marca}>
+            {enviando ? 'Abriendo…' : 'Abrir'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -14,6 +14,7 @@ import { SegmentosModule } from './modules/segmentos/segmentos.module';
 import { PresenciaModule } from './modules/presencia/presencia.module';
 import { TributarioModule } from './modules/tributario/tributario.module';
 import { ScrapingModule } from './modules/scraping/scraping.module';
+import { CrmModule } from './modules/crm/crm.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -52,6 +53,7 @@ import { databaseSslConfig } from './database/database-ssl';
     PresenciaModule,
     TributarioModule,
     ScrapingModule,
+    CrmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -249,3 +249,90 @@
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
+/* Diálogo de alta de oportunidad desde la lista de trabajo. */
+
+.dialogo-fondo {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(15 23 42 / 45%);
+  z-index: 50;
+  padding: 1rem;
+}
+
+.dialogo {
+  width: min(22rem, 100%);
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.dialogo h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--primary);
+}
+
+.dialogo-sujeto {
+  margin: -0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.dialogo label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dialogo select,
+.dialogo input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.dialogo-aviso {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--warning);
+}
+
+.dialogo-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.dialogo-acciones button {
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.dialogo-acciones button[type='submit'] {
+  border-color: var(--secondary);
+  background: var(--secondary);
+  color: var(--surface);
+}
+
+.dialogo-acciones button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
