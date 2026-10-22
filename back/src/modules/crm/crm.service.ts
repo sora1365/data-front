@@ -62,15 +62,15 @@ export class CrmService {
   async catalogos() {
     const [marcas, etapas, comerciales, etiquetas] = await Promise.all([
       this.dataSource.query(
-        `SELECT codigo, nombre FROM crm_marca WHERE activo ORDER BY orden, nombre`,
+        `SELECT codigo, nombre FROM crm.marca WHERE activo ORDER BY orden, nombre`,
       ),
       this.dataSource.query(
-        `SELECT codigo, nombre, orden, es_ganada, es_perdida FROM crm_etapa ORDER BY orden`,
+        `SELECT codigo, nombre, orden, es_ganada, es_perdida FROM crm.etapa ORDER BY orden`,
       ),
       this.dataSource.query(
-        `SELECT usuario, first_name AS nombre FROM crm_comercial WHERE NOT disabled ORDER BY first_name`,
+        `SELECT usuario, first_name AS nombre FROM crm.comercial WHERE NOT disabled ORDER BY first_name`,
       ),
-      this.dataSource.query(`SELECT id, name AS nombre, color FROM crm_etiqueta ORDER BY name`),
+      this.dataSource.query(`SELECT id, name AS nombre, color FROM crm.etiqueta ORDER BY name`),
     ]);
     return { marcas, etapas, comerciales, etiquetas };
   }
@@ -87,7 +87,7 @@ export class CrmService {
    */
   async tablero(filtros: { comercial?: string; marca?: string; producto?: string } = {}) {
     const etapas = await this.dataSource.query(
-      `SELECT codigo, nombre, orden, es_ganada, es_perdida FROM crm_etapa ORDER BY orden`,
+      `SELECT codigo, nombre, orden, es_ganada, es_perdida FROM crm.etapa ORDER BY orden`,
     );
 
     const where: string[] = ['o.archivada_en IS NULL'];
@@ -110,9 +110,9 @@ export class CrmService {
               o.comercial, o.origen_segmento, o.cierre_estimado, o.indice, o.creada_en,
               pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
               ${CAMPOS_SUJETO}
-         FROM crm_oportunidad o
+         FROM crm.oportunidad o
          JOIN producto pr ON pr.codigo = o.producto
-         JOIN crm_marca m ON m.codigo = o.marca
+         JOIN crm.marca m ON m.codigo = o.marca
          LEFT JOIN perfil_comercial p
                 ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
         WHERE ${where.join(' AND ')}
@@ -133,10 +133,10 @@ export class CrmService {
               m.nombre AS marca_nombre, e.nombre AS etapa_nombre,
               e.es_ganada, e.es_perdida, s.nombre AS segmento_nombre,
               ${CAMPOS_SUJETO}
-         FROM crm_oportunidad o
+         FROM crm.oportunidad o
          JOIN producto pr ON pr.codigo = o.producto
-         JOIN crm_marca m ON m.codigo = o.marca
-         JOIN crm_etapa e ON e.codigo = o.etapa
+         JOIN crm.marca m ON m.codigo = o.marca
+         JOIN crm.etapa e ON e.codigo = o.etapa
          LEFT JOIN segmento s ON s.codigo = o.origen_segmento
          LEFT JOIN perfil_comercial p
                 ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
@@ -150,24 +150,24 @@ export class CrmService {
       this.dataSource.query(
         `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
                 linkedin_url, principal
-           FROM crm_contacto
+           FROM crm.contacto
           WHERE tipo_sujeto = $1 AND clave = $2
           ORDER BY principal DESC, first_name`,
         [oportunidad.tipo_sujeto, oportunidad.clave],
       ),
       this.dataSource.query(
         `SELECT id, canal, direccion, resultado, texto, ocurrido_en, autor
-           FROM crm_interaccion WHERE oportunidad = $1 ORDER BY ocurrido_en DESC`,
+           FROM crm.interaccion WHERE oportunidad = $1 ORDER BY ocurrido_en DESC`,
         [id],
       ),
       this.dataSource.query(
         `SELECT id, text, status, date, sales_id
-           FROM crm_nota WHERE deal_id = $1 ORDER BY date DESC`,
+           FROM crm.nota WHERE deal_id = $1 ORDER BY date DESC`,
         [id],
       ),
       this.dataSource.query(
         `SELECT id, text, type, due_date, done_date, sales_id
-           FROM crm_tarea WHERE deal_id = $1 ORDER BY done_date NULLS FIRST, due_date`,
+           FROM crm.tarea WHERE deal_id = $1 ORDER BY done_date NULLS FIRST, due_date`,
         [id],
       ),
     ]);
@@ -203,7 +203,7 @@ export class CrmService {
       datos.etapa ??
       (
         await this.dataSource.query(
-          `SELECT codigo FROM crm_etapa WHERE NOT es_ganada AND NOT es_perdida ORDER BY orden LIMIT 1`,
+          `SELECT codigo FROM crm.etapa WHERE NOT es_ganada AND NOT es_perdida ORDER BY orden LIMIT 1`,
         )
       )[0]?.codigo;
 
@@ -217,7 +217,7 @@ export class CrmService {
     let creada: any;
     try {
       const res = await this.dataSource.query(
-        `INSERT INTO crm_oportunidad
+        `INSERT INTO crm.oportunidad
            (marca, tipo_sujeto, clave, producto, etapa, monto, comercial,
             origen_segmento, origen_lead, cierre_estimado, indice, creada_por)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
@@ -277,7 +277,7 @@ export class CrmService {
 
     params.push(id);
     await this.dataSource.query(
-      `UPDATE crm_oportunidad SET ${sets.join(', ')}, actualizada_en = now()
+      `UPDATE crm.oportunidad SET ${sets.join(', ')}, actualizada_en = now()
         WHERE id = $${params.length}`,
       params,
     );
@@ -295,7 +295,7 @@ export class CrmService {
   async moverEtapa(id: number, etapa: string, indice: number | null, usuario: string) {
     const actual = (
       await this.dataSource.query(
-        `SELECT tipo_sujeto, clave, etapa FROM crm_oportunidad WHERE id = $1`,
+        `SELECT tipo_sujeto, clave, etapa FROM crm.oportunidad WHERE id = $1`,
         [id],
       )
     )[0];
@@ -303,7 +303,7 @@ export class CrmService {
 
     const destino = (
       await this.dataSource.query(
-        `SELECT codigo, es_ganada, es_perdida FROM crm_etapa WHERE codigo = $1`,
+        `SELECT codigo, es_ganada, es_perdida FROM crm.etapa WHERE codigo = $1`,
         [etapa],
       )
     )[0];
@@ -328,12 +328,12 @@ export class CrmService {
       // índice y el orden del tablero depende del desempate de la consulta, que
       // cambia entre recargas.
       await manager.query(
-        `UPDATE crm_oportunidad SET indice = indice + 1
+        `UPDATE crm.oportunidad SET indice = indice + 1
           WHERE etapa = $1 AND indice >= $2 AND archivada_en IS NULL AND id <> $3`,
         [etapa, posicion, id],
       );
       await manager.query(
-        `UPDATE crm_oportunidad SET etapa = $1, indice = $2, actualizada_en = now()
+        `UPDATE crm.oportunidad SET etapa = $1, indice = $2, actualizada_en = now()
           WHERE id = $3`,
         [etapa, posicion, id],
       );
@@ -378,9 +378,9 @@ export class CrmService {
       `SELECT v.*, pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
               p.nombre AS razon_social_actual, p.ruc AS ruc_actual,
               p.direccion AS direccion_actual, p.correo, p.telefono
-         FROM crm_venta v
+         FROM crm.venta v
          JOIN producto pr ON pr.codigo = v.producto
-         JOIN crm_marca m ON m.codigo = v.marca
+         JOIN crm.marca m ON m.codigo = v.marca
          LEFT JOIN perfil_comercial p
                 ON p.tipo_sujeto = v.tipo_sujeto AND p.clave = v.clave
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
@@ -396,7 +396,7 @@ export class CrmService {
     usuario: string,
     datos: { documento?: string; fecha?: string; nota?: string },
   ) {
-    const venta = (await this.dataSource.query(`SELECT * FROM crm_venta WHERE id = $1`, [id]))[0];
+    const venta = (await this.dataSource.query(`SELECT * FROM crm.venta WHERE id = $1`, [id]))[0];
     if (!venta) throw new NotFoundException(`No existe la venta ${id}`);
 
     if (!puedePasarA(venta.estado, destino)) {
@@ -413,7 +413,7 @@ export class CrmService {
     }[destino];
 
     await this.dataSource.query(
-      `UPDATE crm_venta
+      `UPDATE crm.venta
           SET estado = $1,
               documento = coalesce($2, documento),
               nota = coalesce($3, nota),
@@ -423,12 +423,12 @@ export class CrmService {
       [destino, datos.documento ?? null, datos.nota ?? null, usuario, datos.fecha ?? null, id],
     );
 
-    return (await this.dataSource.query(`SELECT * FROM crm_venta WHERE id = $1`, [id]))[0];
+    return (await this.dataSource.query(`SELECT * FROM crm.venta WHERE id = $1`, [id]))[0];
   }
 
   private async ventaDe(oportunidad: number) {
     const filas = await this.dataSource.query(
-      `SELECT id, estado, documento FROM crm_venta WHERE oportunidad = $1`,
+      `SELECT id, estado, documento FROM crm.venta WHERE oportunidad = $1`,
       [oportunidad],
     );
     return filas[0] ?? null;
@@ -443,12 +443,12 @@ export class CrmService {
    */
   private async registrarVenta(oportunidad: number, usuario: string) {
     await this.dataSource.query(
-      `INSERT INTO crm_venta
+      `INSERT INTO crm.venta
          (oportunidad, marca, tipo_sujeto, clave, producto, monto, comercial,
           ruc, razon_social, direccion, marcada_por)
        SELECT o.id, o.marca, o.tipo_sujeto, o.clave, o.producto, o.monto, o.comercial,
               p.ruc, p.nombre, p.direccion, $2
-         FROM crm_oportunidad o
+         FROM crm.oportunidad o
          LEFT JOIN perfil_comercial p
                 ON p.tipo_sujeto = o.tipo_sujeto AND p.clave = o.clave
         WHERE o.id = $1
@@ -460,7 +460,7 @@ export class CrmService {
   /** Sacarla del tablero sin borrar nada: el histórico es lo que se mide. */
   async archivar(id: number) {
     await this.dataSource.query(
-      `UPDATE crm_oportunidad SET archivada_en = now(), actualizada_en = now() WHERE id = $1`,
+      `UPDATE crm.oportunidad SET archivada_en = now(), actualizada_en = now() WHERE id = $1`,
       [id],
     );
     return this.oportunidad(id);
@@ -501,9 +501,9 @@ export class CrmService {
                 o.archivada_en, o.creada_en,
                 pr.nombre AS producto_nombre, e.nombre AS etapa_nombre,
                 e.es_ganada, e.es_perdida
-           FROM crm_oportunidad o
+           FROM crm.oportunidad o
            JOIN producto pr ON pr.codigo = o.producto
-           JOIN crm_etapa e ON e.codigo = o.etapa
+           JOIN crm.etapa e ON e.codigo = o.etapa
           WHERE o.tipo_sujeto = $1 AND o.clave = $2
           ORDER BY o.archivada_en NULLS FIRST, o.creada_en DESC`,
         [tipoSujeto, clave],
@@ -511,7 +511,7 @@ export class CrmService {
       this.dataSource.query(
         `SELECT id, first_name, last_name, title, email_jsonb, phone_jsonb,
                 linkedin_url, principal
-           FROM crm_contacto WHERE tipo_sujeto = $1 AND clave = $2
+           FROM crm.contacto WHERE tipo_sujeto = $1 AND clave = $2
           ORDER BY principal DESC, first_name`,
         [tipoSujeto, clave],
       ),
@@ -545,14 +545,14 @@ export class CrmService {
   private async asegurarComercial(usuario: string, esQuienFirma: boolean) {
     if (esQuienFirma) {
       await this.dataSource.query(
-        `INSERT INTO crm_comercial (usuario, first_name) VALUES ($1, $1)
+        `INSERT INTO crm.comercial (usuario, first_name) VALUES ($1, $1)
          ON CONFLICT (usuario) DO NOTHING`,
         [usuario],
       );
       return;
     }
     const existe = await this.dataSource.query(
-      `SELECT 1 FROM crm_comercial WHERE usuario = $1 AND NOT disabled`,
+      `SELECT 1 FROM crm.comercial WHERE usuario = $1 AND NOT disabled`,
       [usuario],
     );
     if (existe.length === 0) {
@@ -563,7 +563,7 @@ export class CrmService {
   private async siguienteIndice(etapa: string): Promise<number> {
     const filas = await this.dataSource.query(
       `SELECT coalesce(max(indice), -1) + 1 AS siguiente
-         FROM crm_oportunidad WHERE etapa = $1 AND archivada_en IS NULL`,
+         FROM crm.oportunidad WHERE etapa = $1 AND archivada_en IS NULL`,
       [etapa],
     );
     return Number(filas[0]?.siguiente ?? 0);
@@ -584,7 +584,7 @@ export class CrmService {
   ) {
     if (desde === hasta) return;
     await this.dataSource.query(
-      `INSERT INTO crm_interaccion (canal, direccion, oportunidad, resultado, texto, autor)
+      `INSERT INTO crm.interaccion (canal, direccion, oportunidad, resultado, texto, autor)
        VALUES ('sistema', 'saliente', $1, 'cambio_etapa', $2, $3)`,
       [oportunidad, `De «${desde}» a «${hasta}»`, usuario],
     );

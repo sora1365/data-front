@@ -9,7 +9,7 @@ export interface ConsultaLista {
   range?: string;
 }
 
-/** Columnas de `crm_oportunidad` que no se llaman como el campo que expone. */
+/** Columnas de `crm.oportunidad` que no se llaman como el campo que expone. */
 const COLUMNA_REAL_DEALS: Record<string, string> = {
   category: 'producto',
   stage: 'etapa',
@@ -295,12 +295,12 @@ export class CrmRestService {
       // consulta, distinto en cada recarga.
       if (cuerpo.archived_at === null) {
         const etapa = (
-          await this.dataSource.query(`SELECT etapa FROM crm_oportunidad WHERE id = $1`, [id])
+          await this.dataSource.query(`SELECT etapa FROM crm.oportunidad WHERE id = $1`, [id])
         )[0]?.etapa;
         if (etapa) {
           const [{ siguiente }] = await this.dataSource.query(
             `SELECT coalesce(max(indice), -1) + 1 AS siguiente
-               FROM crm_oportunidad WHERE etapa = $1 AND archivada_en IS NULL`,
+               FROM crm.oportunidad WHERE etapa = $1 AND archivada_en IS NULL`,
             [etapa],
           );
           valores.push(siguiente);

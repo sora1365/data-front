@@ -65,7 +65,7 @@ export const RECURSOS: Record<string, Recurso> = {
    * como total. Un importe comercial cabe de sobra en un float.
    */
   deals: {
-    tabla: 'crm_oportunidad',
+    tabla: 'crm.oportunidad',
     columnas: COLUMNAS_OPORTUNIDAD,
     escribibles: [
       'name',
@@ -93,7 +93,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   contacts: {
-    tabla: 'crm_contacto',
+    tabla: 'crm.contacto',
     columnas: [
       'id',
       'first_name',
@@ -179,7 +179,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   tasks: {
-    tabla: 'crm_tarea',
+    tabla: 'crm.tarea',
     columnas: [
       'id',
       'text',
@@ -205,7 +205,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   tags: {
-    tabla: 'crm_etiqueta',
+    tabla: 'crm.etiqueta',
     columnas: ['id', 'name', 'color'],
     escribibles: ['name', 'color'],
     orden: 'name',
@@ -213,7 +213,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   sales: {
-    tabla: 'crm_comercial',
+    tabla: 'crm.comercial',
     columnas: [
       'id',
       'first_name',
@@ -236,7 +236,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   contact_notes: {
-    tabla: 'crm_nota',
+    tabla: 'crm.nota',
     columnas: ['id', 'contact_id', 'deal_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     escribibles: ['contact_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     orden: 'date',
@@ -244,7 +244,7 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   deal_notes: {
-    tabla: 'crm_nota',
+    tabla: 'crm.nota',
     columnas: ['id', 'contact_id', 'deal_id', 'text', 'status', 'date', 'sales_id', 'attachments'],
     escribibles: ['deal_id', 'text', 'date', 'sales_id', 'attachments'],
     orden: 'date',
