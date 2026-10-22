@@ -79,6 +79,14 @@ const Header = () => {
                     to="/deals"
                     isActive={currentPath === "/deals"}
                   />
+                  {/* WhatsApp no es un recurso de react-admin —es una bandeja,
+                      no una lista con ficha y formulario—, así que su entrada
+                      va a mano en vez de salir del `<Resource>`. */}
+                  <NavigationTab
+                    label="WhatsApp"
+                    to="/whatsapp"
+                    isActive={currentPath === "/whatsapp"}
+                  />
                 </nav>
               </div>
               <div className="flex items-center">
