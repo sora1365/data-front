@@ -16,6 +16,7 @@ import { TributarioModule } from './modules/tributario/tributario.module';
 import { ScrapingModule } from './modules/scraping/scraping.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { WhatsappModule } from './modules/crm/whatsapp/whatsapp.module';
+import { AgendaModule } from './modules/crm/agenda/agenda.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -56,6 +57,7 @@ import { databaseSslConfig } from './database/database-ssl';
     ScrapingModule,
     CrmModule,
     WhatsappModule,
+    AgendaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

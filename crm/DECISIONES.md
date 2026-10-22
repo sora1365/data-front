@@ -83,3 +83,27 @@ en Google y medio en Microsoft.
   tabla es la misma en la que caerán WhatsApp y correo cuando haya integración,
   así que lo anotado hoy no habrá que migrarlo. El `ActivityLog` de Atomic no
   la mira: compone su lista en el navegador cruzando notas y oportunidades.
+
+## Una sola ficha: el CRM vive en el 3002
+
+El front de FRIDAY (3000) tuvo pantallas de CRM mientras se construía. Se
+borraron: dos fichas de la misma oportunidad llevan a trabajar en la que no es,
+y a añadir cosas a la que se va a tirar. El menú de FRIDAY conserva un enlace
+externo al CRM y nada más.
+
+**Lo que se perdió al borrarlas y falta rehacer:** la anotación manual de
+interacciones —llamada, visita, WhatsApp hablado por fuera— que vivía en
+`Oportunidad.jsx`. El back sigue entero (`POST /crm/oportunidades/:id/interaccion`,
+con su lista cerrada de canales y el rechazo de fechas futuras); lo que no hay
+es dónde hacerlo desde la pantalla.
+
+## Agenda
+
+Calendarios compartidos al estilo TimeTree, no uno por persona: el calendario
+es la unidad que se comparte, se filtra y se apaga. `puede_editar` separa
+mirar de tocar, para que compartir no obligue a elegir entre que nadie lo vea o
+que cualquiera lo cambie.
+
+Los eventos pueden colgar de una empresa, un contacto o una oportunidad, y
+guardan el **resultado** de la reunión: sin un sitio donde ponerlo acaba en una
+nota suelta que nadie relaciona con la cita.

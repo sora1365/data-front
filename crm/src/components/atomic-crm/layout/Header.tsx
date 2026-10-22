@@ -87,6 +87,11 @@ const Header = () => {
                     to="/whatsapp"
                     isActive={currentPath === "/whatsapp"}
                   />
+                  <NavigationTab
+                    label="Agenda"
+                    to="/agenda"
+                    isActive={currentPath === "/agenda"}
+                  />
                 </nav>
               </div>
               <div className="flex items-center">

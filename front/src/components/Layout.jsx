@@ -70,18 +70,36 @@ function NavGroups({ onNavigate }) {
       {NAVEGACION.map(grupo => (
         <div className="grupo" key={grupo.titulo}>
           <p className="grupo-titulo">{grupo.titulo}</p>
-          {grupo.items.map(item => (
-            <NavLink
-              key={item.ruta}
-              to={item.ruta}
-              onClick={onNavigate}
-              className={({ isActive }) => `enlace${isActive ? ' activo' : ''}`}
-              title={item.etiqueta}
-            >
-              <span className="enlace-icono">{item.icono}</span>
-              <span className="enlace-texto">{item.etiqueta}</span>
-            </NavLink>
-          ))}
+          {grupo.items.map(item =>
+            // El CRM es otra aplicación, en otro puerto: su entrada es un
+            // enlace normal y no una ruta del router, que sólo sabe de las
+            // pantallas de este front.
+            item.externo ? (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                onClick={onNavigate}
+                className="enlace"
+                title={item.etiqueta}
+              >
+                <span className="enlace-icono">{item.icono}</span>
+                <span className="enlace-texto">{item.etiqueta}</span>
+              </a>
+            ) : (
+              <NavLink
+                key={item.ruta}
+                to={item.ruta}
+                onClick={onNavigate}
+                className={({ isActive }) => `enlace${isActive ? ' activo' : ''}`}
+                title={item.etiqueta}
+              >
+                <span className="enlace-icono">{item.icono}</span>
+                <span className="enlace-texto">{item.etiqueta}</span>
+              </NavLink>
+            ),
+          )}
         </div>
       ))}
     </nav>

@@ -6,6 +6,13 @@
  * y nada más.
  */
 
+/**
+ * Dónde vive el CRM. Es otra aplicación, en otro puerto, así que su dirección
+ * se configura: en desarrollo es localhost, y el día que se despliegue será su
+ * dominio.
+ */
+export const CRM_URL = import.meta.env.VITE_CRM_URL || 'http://localhost:3002'
+
 // Iconos como SVG en línea: el proyecto no tiene librería de iconos y no merece
 // añadir una dependencia entera por cinco entradas de menú.
 const Icono = ({ d }) => (
@@ -72,10 +79,19 @@ export const NAVEGACION = [
       { ruta: '/segmentos', etiqueta: 'Segmentos', icono: <Icono d={ICONO_SEGMENTOS} /> },
     ],
   },
+  // El CRM no está aquí: es una aplicación aparte, en su propio puerto. Tuvo
+  // pantallas en este front mientras se construía, y mantener dos fichas de la
+  // misma oportunidad llevaba a trabajar en la que no era. La entrada apunta
+  // fuera, que es donde vive.
   {
     titulo: 'CRM',
     items: [
-      { ruta: '/crm', etiqueta: 'Oportunidades', icono: <Icono d={ICONO_EMBUDO} /> },
+      {
+        href: CRM_URL,
+        etiqueta: 'Abrir el CRM',
+        icono: <Icono d={ICONO_EMBUDO} />,
+        externo: true,
+      },
     ],
   },
   {
