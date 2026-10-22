@@ -78,3 +78,8 @@ en Google y medio en Microsoft.
   días.
 - **Contactos, notas y tareas** tienen tabla y pantalla, pero no se han
   ejercitado de punta a punta.
+- **El historial no se llena solo.** Una llamada, un WhatsApp o una visita se
+  anotan a mano en la ficha de la oportunidad (`/crm/oportunidades/:id`). La
+  tabla es la misma en la que caerán WhatsApp y correo cuando haya integración,
+  así que lo anotado hoy no habrá que migrarlo. El `ActivityLog` de Atomic no
+  la mira: compone su lista en el navegador cruzando notas y oportunidades.

@@ -121,13 +121,51 @@ fantasma con oportunidades que no vería nadie.
 | `PATCH`| `/crm/oportunidades/:id` | Monto, comercial, cierre, marca |
 | `POST` | `/crm/oportunidades/:id/etapa` | Mover de etapa |
 | `POST` | `/crm/oportunidades/:id/archivar` | Sacar del tablero sin borrar |
+| `POST` | `/crm/oportunidades/:id/interaccion` | Anotar una conversación |
 | `GET`  | `/crm/sujeto/:tipo/:clave` | Todo lo que el CRM sabe de un sujeto |
+
+Contactos, notas y tareas se escriben por el otro contrato, `/crm/api`, que es
+el que hablan las pantallas de Atomic. Ver `crm-recursos.ts`.
+
+## El historial se anota a mano
+
+`crm.interaccion` nació llenándose sola, con los cambios de etapa. Eso contesta
+«¿desde cuándo lleva parada?» pero no «¿qué dijo cuando se le llamó?», que es
+la pregunta que se hace al abrir la ficha.
+
+**Una interacción no es una nota.** Las dos guardan texto, pero una nota es lo
+que alguien escribe sobre la venta y una interacción es un contacto que
+ocurrió, con canal, dirección y hora. Es la distinción que permite preguntar
+por dónde entran las ventas y cuánto se tarda en responder — y es la tabla en
+la que después caen WhatsApp y correo solos. Si las llamadas nacieran como
+notas, habría que migrarlas el primer día de la integración.
+
+**El canal es una lista blanca en `crm.reglas.ts`, no un `CHECK` en la tabla.**
+La columna se deja abierta porque los canales que vienen —WhatsApp, correo—
+entrarán desde la integración, y cada uno sería una migración con `ALTER TABLE`
+sobre una tabla que sólo crece. Lo que no es negociable es que la lista sea
+cerrada: con texto libre, «llamada», «Llamada», «tel» y «telefónica» son cuatro
+canales distintos y la pregunta de por dónde entran las ventas deja de tener
+respuesta.
+
+**`sistema` no se escribe a mano.** Es el canal con el que firma el servidor al
+mover una tarjeta. Si se pudiera teclear, cualquiera podría fabricar un «de
+propuesta a ganada» que nunca pasó.
+
+**La fecha admite el pasado y no el futuro.** Anotar hacia atrás es el caso
+normal —se llama el viernes y se apunta el lunes—; hacia adelante no, porque
+una conversación que todavía no ha ocurrido es una tarea, y las tareas tienen
+su propia tabla con `due_date`. Admitirla haría que el historial de una venta
+parada enseñara actividad futura.
+
+**El contacto tiene que ser de ese cliente.** La columna sólo exige que exista,
+así que sin comprobarlo la conversación queda colgada de otra empresa, donde no
+la encuentra nadie y sin que nada falle.
 
 ## Lo que todavía no está
 
-Contactos, notas, tareas e interacciones **tienen tabla pero no endpoints de
-escritura**: la ficha los muestra y el historial se llena solo con los cambios
-de etapa. Es la siguiente entrega, junto con la agenda y `/crm/embudo`.
+`/crm/embudo` y la agenda. Y el historial que se llena solo: WhatsApp y correo
+siguen entrando a mano hasta que haya integración.
 
 ## El CRM y el gestor comercial son dos módulos, no uno
 
