@@ -26,6 +26,15 @@ import { WhatsappService } from './whatsapp.service';
         const token = process.env.WHATSAPP_TOKEN?.trim();
         const log = new Logger('WhatsApp');
 
+        // La URL del webhook es pública: sin App Secret, cualquiera que la
+        // descubra puede inventar conversaciones. Se avisa una vez al
+        // arrancar, que es donde se mira cuando algo no cuadra.
+        if (!process.env.WHATSAPP_APP_SECRET?.trim()) {
+          log.warn(
+            'Sin WHATSAPP_APP_SECRET: los webhooks se aceptan sin comprobar la firma.',
+          );
+        }
+
         if (!token) {
           log.warn(
             'Sin WHATSAPP_TOKEN: los mensajes se registran pero no salen de esta máquina.',

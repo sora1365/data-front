@@ -17,7 +17,12 @@ const ORIGENES = (process.env.CORS_ORIGIN ?? 'http://localhost:3000,http://local
   .filter(Boolean);
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // `rawBody` conserva el cuerpo sin interpretar además del objeto ya
+  // convertido. Hace falta para comprobar la firma de los webhooks de Meta,
+  // que se calcula sobre los bytes exactos que mandaron: volver a serializar
+  // el objeto cambia el orden de las claves y los espacios, y la firma deja de
+  // coincidir aunque el mensaje sea legítimo.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 

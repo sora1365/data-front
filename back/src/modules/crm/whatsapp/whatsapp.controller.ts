@@ -10,7 +10,10 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  RawBodyRequest,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { WhatsappService } from './whatsapp.service';
@@ -111,7 +114,16 @@ export class WhatsappController {
    */
   @Post('webhook')
   @HttpCode(200)
-  async recibir(@Body() cuerpo: any) {
+  async recibir(@Body() cuerpo: any, @Req() peticion: RawBodyRequest<Request>) {
+    if (!this.vieneDeMeta(peticion)) {
+      // Se responde 200 igual. Un 401 le diría a quien está probando la URL
+      // que acertó el camino y falló la firma; y si por un fallo nuestro
+      // rechazáramos webhooks legítimos, Meta acabaría deshabilitando la
+      // suscripción entera. Lo que no se hace es procesarlo.
+      this.log.warn('Webhook descartado: la firma no coincide con el App Secret.');
+      return { received: true };
+    }
+
     try {
       for (const entrada of cuerpo?.entry ?? []) {
         for (const cambio of entrada?.changes ?? []) {
@@ -152,6 +164,28 @@ export class WhatsappController {
     }
 
     return { received: true };
+  }
+
+  /**
+   * Si el webhook lo firmó Meta con nuestro App Secret.
+   *
+   * La URL es pública por definición, así que sin esto cualquiera que la
+   * descubra puede inventar conversaciones en el CRM: mensajes de clientes que
+   * nunca escribieron, o acuses de entrega de mensajes que no llegaron.
+   *
+   * Sin `WHATSAPP_APP_SECRET` configurado no se comprueba nada y se avisa en
+   * el arranque. Es lo que permite desarrollar contra el simulador sin
+   * credenciales, pero en producción es una puerta abierta: el aviso está para
+   * que no pase inadvertido.
+   */
+  private vieneDeMeta(peticion: RawBodyRequest<Request>): boolean {
+    const secreto = process.env.WHATSAPP_APP_SECRET?.trim();
+    if (!secreto) return true;
+
+    const firma = peticion.headers['x-hub-signature-256'];
+    if (typeof firma !== 'string' || !peticion.rawBody) return false;
+
+    return firmaValida(peticion.rawBody, firma, secreto);
   }
 
   /** Los estados de Meta vienen en inglés; la tabla los guarda en español. */
