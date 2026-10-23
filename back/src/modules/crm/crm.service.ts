@@ -17,6 +17,7 @@ import {
   puedePasarA,
   repartirEnColumnas,
 } from './crm.reglas';
+import { SeguimientoService } from './seguimiento/seguimiento.service';
 
 /**
  * Filas de un resultado de TypeORM.
@@ -90,6 +91,7 @@ export class CrmService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly segmentos: SegmentosService,
+    private readonly seguimiento: SeguimientoService,
   ) {}
 
   // ------------------------------------------------------------------ catálogos
@@ -412,6 +414,12 @@ export class CrmService {
     if (destino.es_ganada) await this.registrarVenta(id, usuario);
 
     await this.registrarInteraccionDeEtapa(id, actual.etapa, etapa, usuario);
+
+    // El seguimiento va detrás de todo lo demás y no puede tumbar el
+    // movimiento: que una secuencia no arranque —o que ya estuviera en
+    // marcha— no es razón para que la venta se quede en la etapa anterior.
+    await this.seguimiento.cortarPorEtapa(id, destino);
+    await this.seguimiento.dispararPorEtapa(id, etapa, usuario);
     return this.oportunidad(id);
   }
 

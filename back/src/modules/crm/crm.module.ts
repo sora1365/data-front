@@ -5,6 +5,8 @@ import { CrmRestController } from './crm-rest.controller';
 import { CrmRestService } from './crm-rest.service';
 import { CrmCoincidenciasService } from './crm-coincidencias.service';
 import { CrmService } from './crm.service';
+import { SeguimientoController } from './seguimiento/seguimiento.controller';
+import { SeguimientoService } from './seguimiento/seguimiento.service';
 import { TablerosController } from './tableros/tableros.controller';
 import { TablerosService } from './tableros/tableros.service';
 
@@ -15,8 +17,14 @@ import { TablerosService } from './tableros/tableros.service';
  */
 @Module({
   imports: [SegmentosModule],
-  controllers: [CrmController, CrmRestController, TablerosController],
-  providers: [CrmService, CrmRestService, CrmCoincidenciasService, TablerosService],
+  controllers: [CrmController, CrmRestController, TablerosController, SeguimientoController],
+  providers: [
+    CrmService,
+    CrmRestService,
+    CrmCoincidenciasService,
+    TablerosService,
+    SeguimientoService,
+  ],
   exports: [CrmService],
 })
 export class CrmModule {}

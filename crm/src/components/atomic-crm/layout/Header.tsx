@@ -98,6 +98,11 @@ const Header = () => {
                     isActive={currentPath === "/campanias"}
                   />
                   <NavigationTab
+                    label="Seguimiento"
+                    to="/seguimiento"
+                    isActive={currentPath === "/seguimiento"}
+                  />
+                  <NavigationTab
                     label="Tableros"
                     to="/tableros"
                     isActive={currentPath === "/tableros"}

@@ -185,3 +185,38 @@ Tres decisiones que hacen que los números signifiquen algo:
 
 Las archivadas quedan fuera: se archiva lo abierto por error o por duplicado, y
 contarlo hundiría la conversión con ventas que nunca existieron.
+
+## Seguimiento: el plan genera tareas, no envíos
+
+«Día 1 llamada, día 3 WhatsApp, día 7 correo» estaba en los requerimientos y
+hoy vive en la cabeza de quien vende. Lo que se pierde no es el primer
+contacto —ese lo hace todo el mundo— sino el tercero: la empresa que dijo
+«escríbeme la semana que viene».
+
+**Una secuencia crea tareas con su canal; no manda nada.** Mandar solo el
+WhatsApp del tercer día es técnicamente igual de fácil y convierte el CRM en
+algo que escribe a clientes sin que nadie lea lo que contestaron. Es la misma
+regla que el rastreador de presencia: lo automático propone, una persona firma.
+Las tareas caen en la agenda como cualquier otra, que es lo que hace que esto
+sirva: el seguimiento aparece el martes junto a las visitas del martes.
+
+Cuatro decisiones que no se ven:
+
+- **Los días se cuentan desde el arranque, no desde el paso anterior.**
+  Encadenando, un retraso de tres días en la primera llamada corre todo lo que
+  viene detrás y el plan de una semana dura diez sin que nadie lo decida.
+- **Lo que cae en sábado o domingo se mueve al lunes.** Una tarea comercial que
+  vence en fin de semana se mira el lunes ya vencida, en rojo; si eso pasa con
+  medio plan, el rojo deja de significar que algo va mal.
+- **Las tareas se crean todas de golpe**, no una según se va haciendo la
+  anterior. Así se ve el plan completo en la agenda de la semana que viene, y
+  no hace falta un proceso que despierte cada noche a crear la siguiente.
+- **Un seguimiento vivo por oportunidad.** Dos planes a la vez son dos
+  calendarios de llamadas que no se conocen: al cliente le llaman dos veces el
+  mismo día y las dos tareas dicen que toca.
+
+Al ganar o perder, el seguimiento se corta solo y **lo pendiente se borra**, no
+se marca como hecho: darlo por hecho diría que alguien llamó, y el historial
+dejaría de servir para saber qué pasó de verdad. Lo ya hecho se queda. El
+motivo del corte es obligatorio, porque «se cortó» no distingue haber cerrado
+el trato de haberse rendido.
