@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Cotizar } from "./Cotizar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,6 +29,43 @@ export const Proformas = ({ dealId }: { dealId: string | number }) => {
   const [proformas, setProformas] = useState<Proforma[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+
+  /**
+   * Lo que acaba de cotizarse entra como línea del borrador.
+   *
+   * Si no hay ninguno se crea, y la línea cotizada **sustituye** a la que sale
+   * sola del producto: las dos dicen el precio de lo mismo, y dejar las dos
+   * cotiza el doble.
+   */
+  const ponerEnLaProforma = async (
+    precio: number,
+    descripcion: string,
+    cotizacion: string,
+  ) => {
+    setError(null);
+    try {
+      const linea = {
+        producto: null,
+        descripcion,
+        cantidad: 1,
+        precio_unitario: precio,
+        descuento_pct: 0,
+        iva_pct: 15,
+        cotizacion,
+      };
+
+      const borrador = proformas.find((p) => p.estado === "borrador");
+      if (borrador) {
+        await editarProforma(borrador.id, { lineas: [...borrador.lineas, linea] });
+      } else {
+        const nueva = await crearProforma(dealId);
+        await editarProforma(nueva.id, { lineas: [linea] });
+      }
+      await cargar();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   const cargar = useCallback(async () => {
     try {
@@ -71,6 +109,8 @@ export const Proformas = ({ dealId }: { dealId: string | number }) => {
           </Button>
         )}
       </div>
+
+      <Cotizar dealId={dealId} alCotizar={ponerEnLaProforma} />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

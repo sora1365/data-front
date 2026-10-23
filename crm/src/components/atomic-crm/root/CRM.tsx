@@ -63,6 +63,7 @@ import { WhatsappPage } from "../whatsapp/WhatsappPage";
 import { AgendaPage } from "../agenda/AgendaPage";
 import { CampaniasPage } from "../campanias/CampaniasPage";
 import { TablerosPage } from "../tableros/TablerosPage";
+import { PreciosPage } from "../precios/PreciosPage";
 import { SeguimientoPage } from "../seguimiento/SeguimientoPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
@@ -277,6 +278,7 @@ const DesktopAdmin = (
         <Route path={CampaniasPage.path} element={<CampaniasPage />} />
         <Route path={TablerosPage.path} element={<TablerosPage />} />
         <Route path={SeguimientoPage.path} element={<SeguimientoPage />} />
+        <Route path={PreciosPage.path} element={<PreciosPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />

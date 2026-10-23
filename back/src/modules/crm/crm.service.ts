@@ -464,10 +464,36 @@ export class CrmService {
     }
 
     return this.dataSource.query(
+      /**
+       * Con las líneas de la proforma aceptada, cuando la hubo.
+       *
+       * Es lo que convierte la entrega en algo facturable sin volver a
+       * teclear nada: cantidades, descuentos y el IVA de cada producto, tal
+       * como el cliente los aceptó. Sin esto, el contable recibe un importe
+       * suelto y la factura se arma a mano, que es donde deja de cuadrar con
+       * la oferta.
+       */
       `SELECT v.*, pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
               p.nombre AS razon_social_actual, p.ruc AS ruc_actual,
-              p.direccion AS direccion_actual, p.correo, p.telefono
+              p.direccion AS direccion_actual, p.correo, p.telefono,
+              pf.numero AS proforma_numero,
+              pf.aceptada_por AS proforma_aceptada_por,
+              pf.cerrada_en AS proforma_aceptada_en,
+              pf.total::float8 AS proforma_total,
+              coalesce(
+                (SELECT json_agg(json_build_object(
+                          'orden', l.orden, 'producto', l.producto,
+                          'descripcion', l.descripcion,
+                          'cantidad', l.cantidad::float8,
+                          'precio_unitario', l.precio_unitario::float8,
+                          'descuento_pct', l.descuento_pct::float8,
+                          'iva_pct', l.iva_pct::float8)
+                        ORDER BY l.orden)
+                   FROM crm.proforma_linea l WHERE l.proforma = pf.id),
+                '[]'::json
+              ) AS lineas
          FROM crm.venta v
+         LEFT JOIN crm.proforma pf ON pf.id = v.proforma
          JOIN producto pr ON pr.codigo = v.producto
          JOIN crm.marca m ON m.codigo = v.marca
          LEFT JOIN perfil_comercial p
@@ -535,13 +561,35 @@ export class CrmService {
       // Los datos de facturación salen de la ficha de la empresa, no del
       // perfil: es la empresa la que el comercial corrigió si hacía falta, y
       // puede no estar en el padrón en absoluto.
+      /**
+       * Si hay una proforma aceptada, manda ella: su base imponible es lo que
+       * el cliente aceptó por escrito, y sus datos son los que figuran en el
+       * documento que recibió. El importe de la tarjeta es una estimación
+       * interna que casi nunca se corrige después de cotizar.
+       *
+       * `monto` es la base sin IVA —subtotal menos descuentos—, que es sobre
+       * lo que se calcula la comisión y lo que el contable usa de base para
+       * facturar; el IVA lo recompone él desde las líneas.
+       */
       `INSERT INTO crm.venta
          (oportunidad, marca, company_id, tipo_sujeto, clave, producto, monto, comercial,
-          ruc, razon_social, direccion, marcada_por)
-       SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto, o.monto,
-              o.comercial, emp.tax_identifier, emp.name, emp.address, $2
+          ruc, razon_social, direccion, marcada_por, proforma)
+       SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto,
+              coalesce(p.subtotal - p.descuento, o.monto),
+              o.comercial,
+              coalesce(p.ruc, emp.tax_identifier),
+              coalesce(p.razon_social, emp.name),
+              coalesce(p.direccion, emp.address),
+              $2,
+              p.id
          FROM crm.oportunidad o
          JOIN crm.empresa emp ON emp.id = o.company_id
+         LEFT JOIN LATERAL (
+           SELECT * FROM crm.proforma pf
+            WHERE pf.oportunidad = o.id AND pf.estado = 'aceptada'
+            ORDER BY pf.cerrada_en DESC NULLS LAST
+            LIMIT 1
+         ) p ON true
         WHERE o.id = $1
        ON CONFLICT (oportunidad) DO UPDATE SET
          estado = 'pendiente_facturacion',
@@ -552,7 +600,8 @@ export class CrmService {
          ruc = EXCLUDED.ruc,
          razon_social = EXCLUDED.razon_social,
          direccion = EXCLUDED.direccion,
-         marcada_por = EXCLUDED.marcada_por
+         marcada_por = EXCLUDED.marcada_por,
+         proforma = EXCLUDED.proforma
        WHERE crm.venta.anulada_en IS NOT NULL`,
       [oportunidad, usuario],
     );

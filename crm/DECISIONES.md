@@ -308,3 +308,45 @@ fallara, la aceptación ya está guardada: es lo que no se puede perder.
 El enlace del cliente va por un uuid y no por el id. Con el id, cualquiera que
 reciba una proforma lee las demás cambiando un número en la barra de
 direcciones, y ahí van el RUC y los precios de otros clientes.
+
+## Cotizadores: de cuánto cuesta hacerlo a cuánto se cobra
+
+Un precio de lista sirve para lo que siempre vale lo mismo. Un outsourcing
+contable no: depende de qué tareas se hacen y de cuánto se mueve esa empresa.
+Esa cuenta vivía en una hoja aparte, y seis meses después nadie podía decir por
+qué un cliente paga 480 y el de al lado 700.
+
+Un cotizador son **tareas con tiempos, un costo por hora y un margen**. Las
+tareas tienen horas fijas y horas por unidad de una variable —transacciones al
+mes, empleados, sucursales—, que es «asigno tiempos según la
+transaccionalidad» sin inventar un lenguaje de fórmulas que luego nadie sabe
+leer. Cada tarea puede tener su propio costo hora: revisar el balance no cuesta
+lo que digitar facturas.
+
+**El modo del margen se declara.** «30 % de margen» significa dos cosas y las
+dos son normales: cargar un 30 % sobre el costo (100 → 130) o que la ganancia
+sea el 30 % del precio (100 → 142,86). Dejarlo implícito es cotizar un 10 % por
+debajo de lo que alguien cree, así que se guarda con cada cotización.
+
+**Se guarda la cotización, no sólo el precio**: las entradas que se usaron y el
+detalle por tarea. El costo por hora y el margen cambian, y recalcular una
+cotización del año pasado con los números de hoy daría un precio que nadie
+ofreció nunca. La línea de la proforma apunta a su cotización, así que «¿por
+qué paga esto?» se contesta abriendo el documento.
+
+En pantalla se enseña el costo y la ganancia junto al precio: quien negocia un
+descuento tiene que ver cuánto margen le queda **antes** de concederlo.
+
+## La frontera con el contable: la proforma viaja con la venta
+
+Ganar entregaba al contable un importe suelto. Ahora la venta dice de qué
+proforma salió y la entrega lleva **las líneas que el cliente aceptó**, con
+cantidades, descuentos y el IVA de cada producto. Sin eso, la factura se arma a
+mano en el otro sistema y es donde deja de cuadrar con la oferta.
+
+Cuando hay proforma aceptada manda ella: su base imponible es lo que el cliente
+aceptó por escrito, y sus datos son los del documento que recibió. El importe
+de la tarjeta es una estimación interna que casi nunca se corrige después de
+cotizar. `monto` sigue siendo la base sin IVA —subtotal menos descuentos—, que
+es sobre lo que se calcula la comisión; el IVA lo recompone el contable desde
+las líneas.

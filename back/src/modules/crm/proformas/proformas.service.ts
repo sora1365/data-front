@@ -127,7 +127,7 @@ export class ProformasService {
 
   private lineas(proforma: number) {
     return this.dataSource.query(
-      `SELECT id, orden, producto, descripcion,
+      `SELECT id, orden, producto, descripcion, cotizacion,
               cantidad::float8 AS cantidad,
               precio_unitario::float8 AS precio_unitario,
               descuento_pct::float8 AS descuento_pct,
@@ -310,8 +310,8 @@ export class ProformasService {
         await manager.query(
           `INSERT INTO crm.proforma_linea
              (proforma, orden, producto, descripcion, cantidad, precio_unitario,
-              descuento_pct, iva_pct)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+              descuento_pct, iva_pct, cotizacion)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
           [
             proforma,
             orden,
@@ -321,6 +321,10 @@ export class ProformasService {
             Number(linea.precio_unitario ?? 0),
             Number(linea.descuento_pct ?? 0),
             Number(linea.iva_pct ?? 15),
+            // De qué cotización salió la línea, cuando salió de una: es lo
+            // que permite contestar «¿por qué paga esto?» abriendo el
+            // documento, sin rehacer la cuenta de memoria.
+            (linea as any).cotizacion ? Number((linea as any).cotizacion) : null,
           ],
         );
       }
