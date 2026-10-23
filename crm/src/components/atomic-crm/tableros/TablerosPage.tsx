@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { MetasYComisiones } from "./MetasYComisiones";
 import {
   dinero,
   periodosHabituales,
@@ -94,6 +95,8 @@ export const TablerosPage = () => {
           </div>
 
           <Embudo tramos={datos.embudo} />
+
+          <MetasYComisiones />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Desglose titulo="Por producto" filas={datos.porProducto} />

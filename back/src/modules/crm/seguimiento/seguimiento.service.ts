@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -16,6 +18,8 @@ import {
 
 @Injectable()
 export class SeguimientoService {
+  private readonly logger = new Logger(SeguimientoService.name);
+
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   // -------------------------------------------------------------- secuencias
@@ -195,9 +199,13 @@ export class SeguimientoService {
       try {
         await this.iniciar(codigo, oportunidad, usuario);
         arrancadas.push(codigo);
-      } catch {
+      } catch (e) {
         // Ya estaba en marcha, o la secuencia no aplica a esta venta. Las dos
-        // cosas son normales aquí y ninguna es un error del movimiento.
+        // cosas son normales aquí y ninguna es un error del movimiento. Lo
+        // demás —la base de datos que falla— sí se deja escrito.
+        if (!(e instanceof HttpException)) {
+          this.logger.error(`No arrancó «${codigo}» sobre la oportunidad ${oportunidad}`, e as Error);
+        }
       }
     }
     return arrancadas;

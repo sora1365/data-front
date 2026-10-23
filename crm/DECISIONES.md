@@ -220,3 +220,35 @@ se marca como hecho: darlo por hecho diría que alguien llamó, y el historial
 dejaría de servir para saber qué pasó de verdad. Lo ya hecho se queda. El
 motivo del corte es obligatorio, porque «se cortó» no distingue haber cerrado
 el trato de haberse rendido.
+
+## Comisiones: se pagan sobre lo cobrado
+
+La comisión se calcula sobre las ventas **cobradas** en el mes, no sobre las
+ganadas. Pagar por una venta que todavía no entró es adelantar dinero contra
+una factura que puede no cobrarse nunca, y descontarlo después del sueldo de
+alguien es una conversación que no se quiere tener.
+
+Lo ganado y pendiente de cobro se enseña aparte, como comisión **en camino**:
+es lo que el comercial sí quiere ver, y es lo que evita que la cifra de arriba
+parezca un error el mes que se vendió mucho y se cobró tarde.
+
+El cumplimiento también se mide sobre lo cobrado, por lo mismo: si se midiera
+sobre lo ganado, una venta que nadie ha pagado destrabaría el umbral a partir
+del cual una regla empieza a pagar.
+
+Otras tres decisiones:
+
+- **Cada venta se fecha por lo que le toca**: lo cobrado por la fecha de cobro,
+  lo pendiente por la fecha en que se ganó. Fechando todo por «ganada» una
+  venta de diciembre cobrada en enero no contaría en enero, que es el mes en
+  que se paga.
+- **La regla más específica gana**: producto, luego marca, luego la general.
+  Sin ese orden, una regla general del 5 % y una de producto del 8 % son dos
+  respuestas correctas a la misma venta y la comisión depende del orden en que
+  salgan de la consulta.
+- **Una comisión en cero siempre dice por qué** —sin regla aplicable, o por
+  debajo del umbral—. Un cero sin explicación se lee como un fallo del sistema
+  y acaba en una reclamación.
+
+Sin meta cargada, el umbral no bloquea el pago: no se le deja de pagar a
+alguien por un dato que la empresa no puso.

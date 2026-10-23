@@ -108,3 +108,73 @@ export const dinero = (valor: number) =>
     currency: "USD",
     maximumFractionDigits: 0,
   });
+
+// ------------------------------------------------------ metas y comisiones
+
+export interface FilaDeMetas {
+  comercial: string;
+  nombre: string;
+  meta: number | null;
+  cobrado: number;
+  porCobrar: number;
+  cumplimiento: number | null;
+  comision: number;
+  comisionEnCamino: number;
+}
+
+export interface ReglaDeComision {
+  codigo: string;
+  nombre: string;
+  producto: string | null;
+  marca: string | null;
+  porcentaje: number;
+  desde_cumplimiento: number;
+}
+
+async function pedir(ruta: string, opciones: RequestInit = {}) {
+  const respuesta = await fetch(`${API}/crm/tableros${ruta}`, {
+    ...opciones,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Usuario": usuarioActual(),
+      ...(opciones.headers as Record<string, string>),
+    },
+  });
+  if (!respuesta.ok) {
+    let mensaje = `${respuesta.status} ${respuesta.statusText}`;
+    try {
+      const cuerpo = await respuesta.json();
+      if (cuerpo?.message) mensaje = cuerpo.message;
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+    throw new Error(mensaje);
+  }
+  return respuesta.json();
+}
+
+export const metasDelMes = (anio: number, mes: number): Promise<FilaDeMetas[]> =>
+  pedir(`/metas?anio=${anio}&mes=${mes}`);
+
+export const reglasDeComision = (): Promise<ReglaDeComision[]> =>
+  pedir("/comisiones/reglas");
+
+export const ponerMeta = (datos: {
+  comercial: string;
+  anio: number;
+  mes: number;
+  monto: number;
+}) => pedir("/metas", { method: "POST", body: JSON.stringify(datos) });
+
+export const ponerRegla = (datos: {
+  codigo: string;
+  nombre: string;
+  porcentaje: number;
+  producto?: string;
+  desdeCumplimiento?: number;
+}) => pedir("/comisiones/reglas", { method: "POST", body: JSON.stringify(datos) });
+
+export const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];

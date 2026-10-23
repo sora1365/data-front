@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -88,6 +89,8 @@ export interface RegistrarInteraccion {
 
 @Injectable()
 export class CrmService {
+  private readonly logger = new Logger(CrmService.name);
+
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly segmentos: SegmentosService,
@@ -418,8 +421,17 @@ export class CrmService {
     // El seguimiento va detrás de todo lo demás y no puede tumbar el
     // movimiento: que una secuencia no arranque —o que ya estuviera en
     // marcha— no es razón para que la venta se quede en la etapa anterior.
-    await this.seguimiento.cortarPorEtapa(id, destino);
-    await this.seguimiento.dispararPorEtapa(id, etapa, usuario);
+    //
+    // Sólo si cambió de etapa: reordenar la tarjeta dentro de su columna no es
+    // «entrar» en ella, y volvería a arrancar un plan que ya terminó.
+    if (actual.etapa !== etapa) {
+      try {
+        await this.seguimiento.cortarPorEtapa(id, destino);
+        await this.seguimiento.dispararPorEtapa(id, etapa, usuario);
+      } catch (e) {
+        this.logger.error(`Seguimiento de la oportunidad ${id} al pasar a «${etapa}»`, e as Error);
+      }
+    }
     return this.oportunidad(id);
   }
 

@@ -9,6 +9,7 @@ import { SeguimientoController } from './seguimiento/seguimiento.controller';
 import { SeguimientoService } from './seguimiento/seguimiento.service';
 import { TablerosController } from './tableros/tableros.controller';
 import { TablerosService } from './tableros/tableros.service';
+import { ComisionesService } from './tableros/comisiones.service';
 
 /**
  * Importa `SegmentosModule` para reutilizar `marcarEstado`: el estado comercial
@@ -23,6 +24,7 @@ import { TablerosService } from './tableros/tableros.service';
     CrmRestService,
     CrmCoincidenciasService,
     TablerosService,
+    ComisionesService,
     SeguimientoService,
   ],
   exports: [CrmService],

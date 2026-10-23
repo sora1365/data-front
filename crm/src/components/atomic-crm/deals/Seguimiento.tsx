@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useRefresh } from "ra-core";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,8 @@ import {
  */
 export const Seguimiento = ({ dealId }: { dealId: string | number }) => {
   const [secuencias, setSecuencias] = useState<Secuencia[]>([]);
-  const [míos, setMios] = useState<SeguimientoDeOportunidad[]>([]);
+  const refresh = useRefresh();
+  const [mios, setMios] = useState<SeguimientoDeOportunidad[]>([]);
   const [elegida, setElegida] = useState<string>("");
   const [previo, setPrevio] = useState<Paso[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export const Seguimiento = ({ dealId }: { dealId: string | number }) => {
     previoDe(elegida).then(setPrevio).catch(() => setPrevio([]));
   }, [elegida]);
 
-  const vivo = míos.find((m) => m.estado === "vivo");
+  const vivo = mios.find((m: SeguimientoDeOportunidad) => m.estado === "vivo");
 
   const iniciar = async () => {
     setGuardando(true);
@@ -61,6 +63,8 @@ export const Seguimiento = ({ dealId }: { dealId: string | number }) => {
       await iniciarSeguimiento(elegida, dealId);
       setElegida("");
       await cargar();
+      // Las tareas nuevas también salen en la lista de tareas de la ficha.
+      refresh();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -74,14 +78,14 @@ export const Seguimiento = ({ dealId }: { dealId: string | number }) => {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {míos.length === 0 && (
+      {mios.length === 0 && (
         <p className="text-sm text-muted-foreground">
           Sin plan de seguimiento. Cada paso se convierte en una tarea con su
           canal; nada se envía solo.
         </p>
       )}
 
-      {míos.map((m) => (
+      {mios.map((m) => (
         <div key={m.id} className="border rounded-md p-2 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{m.secuencia_nombre}</span>
