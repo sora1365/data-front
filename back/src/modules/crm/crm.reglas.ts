@@ -64,6 +64,33 @@ export function puedeDesgalardonar(estadoVenta: EstadoVenta | null): boolean {
   return estadoVenta === null || estadoVenta === 'pendiente_facturacion' || estadoVenta === 'anulada';
 }
 
+export type AccionSobreLaVenta = 'registrar' | 'anular' | 'nada';
+
+/**
+ * Qué hay que hacerle a la venta cuando la oportunidad cambia de etapa.
+ *
+ * Ganar la registra; **sacarla de ganada la anula**. Sin lo segundo, deshacer
+ * un «ganada» puesto por error deja viva una venta que el contable tiene
+ * pendiente de facturar y que el cuadro de comisiones sigue contando como
+ * dinero en camino: una venta fantasma de un trato que ya no existe.
+ *
+ * Se anula y no se borra. La entrega al contable ocurrió, y borrar la fila
+ * haría desaparecer de los dos lados algo que alguien pudo haber empezado a
+ * tramitar; anulada se ve, y se ve que se deshizo.
+ *
+ * Una venta ya facturada o cobrada no llega hasta aquí: `puedeDesgalardonar`
+ * corta antes el movimiento. Si llegara, no se toca —existe un documento con
+ * efectos tributarios y anularlo es cosa del contable, no de arrastrar una
+ * tarjeta—.
+ */
+export function accionSobreLaVenta(
+  estadoVenta: EstadoVenta | null,
+  destinoEsGanada: boolean,
+): AccionSobreLaVenta {
+  if (destinoEsGanada) return 'registrar';
+  return estadoVenta === 'pendiente_facturacion' ? 'anular' : 'nada';
+}
+
 /**
  * Qué transiciones de la venta admite el módulo contable.
  *

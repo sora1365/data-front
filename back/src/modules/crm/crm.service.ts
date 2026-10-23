@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { SegmentosService } from '../segmentos/segmentos.service';
 import {
+  accionSobreLaVenta,
   CANALES,
   EstadoVenta,
   estadoAlAbrir,
@@ -17,6 +19,7 @@ import {
   puedePasarA,
   repartirEnColumnas,
 } from './crm.reglas';
+import { SeguimientoService } from './seguimiento/seguimiento.service';
 
 /**
  * Filas de un resultado de TypeORM.
@@ -93,9 +96,12 @@ export interface RegistrarInteraccion {
 
 @Injectable()
 export class CrmService {
+  private readonly logger = new Logger(CrmService.name);
+
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly segmentos: SegmentosService,
+    private readonly seguimiento: SeguimientoService,
   ) {}
 
   // ------------------------------------------------------------------ catálogos
@@ -312,6 +318,15 @@ export class CrmService {
       throw e;
     }
 
+    // El primer asiento del recorrido: en qué etapa nació. Sin él, una
+    // oportunidad que nunca se movió no aparecería en el embudo, y el primer
+    // tramo de las que sí se movieron mediría desde la nada.
+    await this.dataSource.query(
+      `INSERT INTO crm.oportunidad_etapa (oportunidad, desde, hasta, autor, ocurrido_en)
+       VALUES ($1, NULL, $2, $3, now())`,
+      [creada.id, etapa, usuario],
+    );
+
     const nuevoEstado = empresa.tipo_sujeto ? estadoAlAbrir(estado?.estado ?? null) : null;
     if (nuevoEstado) {
       await this.segmentos.marcarEstado(empresa.tipo_sujeto, empresa.clave, nuevoEstado);
@@ -409,10 +424,30 @@ export class CrmService {
       await this.segmentos.marcarEstado(actual.tipo_sujeto, actual.clave, nuevoEstado);
     }
 
-    // Ganar es lo que entrega la venta al módulo contable.
-    if (destino.es_ganada) await this.registrarVenta(id, usuario);
+    // Ganar es lo que entrega la venta al módulo contable, y deshacerlo la
+    // retira: una venta viva colgando de un trato que ya no está ganado es
+    // dinero que el contable tiene pendiente de facturar y que el cuadro de
+    // comisiones sigue contando como comisión en camino.
+    const accion = accionSobreLaVenta(venta?.estado ?? null, destino.es_ganada);
+    if (accion === 'registrar') await this.registrarVenta(id, usuario);
+    if (accion === 'anular') await this.anularVenta(id, usuario, actual.etapa);
 
     await this.registrarInteraccionDeEtapa(id, actual.etapa, etapa, usuario);
+
+    // El seguimiento va detrás de todo lo demás y no puede tumbar el
+    // movimiento: que una secuencia no arranque —o que ya estuviera en
+    // marcha— no es razón para que la venta se quede en la etapa anterior.
+    //
+    // Sólo si cambió de etapa: reordenar la tarjeta dentro de su columna no es
+    // «entrar» en ella, y volvería a arrancar un plan que ya terminó.
+    if (actual.etapa !== etapa) {
+      try {
+        await this.seguimiento.cortarPorEtapa(id, destino);
+        await this.seguimiento.dispararPorEtapa(id, etapa, usuario);
+      } catch (e) {
+        this.logger.error(`Seguimiento de la oportunidad ${id} al pasar a «${etapa}»`, e as Error);
+      }
+    }
     return this.oportunidad(id);
   }
 
@@ -439,10 +474,36 @@ export class CrmService {
     }
 
     return this.dataSource.query(
+      /**
+       * Con las líneas de la proforma aceptada, cuando la hubo.
+       *
+       * Es lo que convierte la entrega en algo facturable sin volver a
+       * teclear nada: cantidades, descuentos y el IVA de cada producto, tal
+       * como el cliente los aceptó. Sin esto, el contable recibe un importe
+       * suelto y la factura se arma a mano, que es donde deja de cuadrar con
+       * la oferta.
+       */
       `SELECT v.*, pr.nombre AS producto_nombre, m.nombre AS marca_nombre,
               p.nombre AS razon_social_actual, p.ruc AS ruc_actual,
-              p.direccion AS direccion_actual, p.correo, p.telefono
+              p.direccion AS direccion_actual, p.correo, p.telefono,
+              pf.numero AS proforma_numero,
+              pf.aceptada_por AS proforma_aceptada_por,
+              pf.cerrada_en AS proforma_aceptada_en,
+              pf.total::float8 AS proforma_total,
+              coalesce(
+                (SELECT json_agg(json_build_object(
+                          'orden', l.orden, 'producto', l.producto,
+                          'descripcion', l.descripcion,
+                          'cantidad', l.cantidad::float8,
+                          'precio_unitario', l.precio_unitario::float8,
+                          'descuento_pct', l.descuento_pct::float8,
+                          'iva_pct', l.iva_pct::float8)
+                        ORDER BY l.orden)
+                   FROM crm.proforma_linea l WHERE l.proforma = pf.id),
+                '[]'::json
+              ) AS lineas
          FROM crm.venta v
+         LEFT JOIN crm.proforma pf ON pf.id = v.proforma
          JOIN producto pr ON pr.codigo = v.producto
          JOIN crm.marca m ON m.codigo = v.marca
          LEFT JOIN perfil_comercial p
@@ -510,16 +571,70 @@ export class CrmService {
       // Los datos de facturación salen de la ficha de la empresa, no del
       // perfil: es la empresa la que el comercial corrigió si hacía falta, y
       // puede no estar en el padrón en absoluto.
+      /**
+       * Si hay una proforma aceptada, manda ella: su base imponible es lo que
+       * el cliente aceptó por escrito, y sus datos son los que figuran en el
+       * documento que recibió. El importe de la tarjeta es una estimación
+       * interna que casi nunca se corrige después de cotizar.
+       *
+       * `monto` es la base sin IVA —subtotal menos descuentos—, que es sobre
+       * lo que se calcula la comisión y lo que el contable usa de base para
+       * facturar; el IVA lo recompone él desde las líneas.
+       */
       `INSERT INTO crm.venta
          (oportunidad, marca, company_id, tipo_sujeto, clave, producto, monto, comercial,
-          ruc, razon_social, direccion, marcada_por)
-       SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto, o.monto,
-              o.comercial, emp.tax_identifier, emp.name, emp.address, $2
+          ruc, razon_social, direccion, marcada_por, proforma)
+       SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto,
+              coalesce(p.subtotal - p.descuento, o.monto),
+              o.comercial,
+              coalesce(p.ruc, emp.tax_identifier),
+              coalesce(p.razon_social, emp.name),
+              coalesce(p.direccion, emp.address),
+              $2,
+              p.id
          FROM crm.oportunidad o
          JOIN crm.empresa emp ON emp.id = o.company_id
+         LEFT JOIN LATERAL (
+           SELECT * FROM crm.proforma pf
+            WHERE pf.oportunidad = o.id AND pf.estado = 'aceptada'
+            ORDER BY pf.cerrada_en DESC NULLS LAST
+            LIMIT 1
+         ) p ON true
         WHERE o.id = $1
-       ON CONFLICT (oportunidad) DO NOTHING`,
+       ON CONFLICT (oportunidad) DO UPDATE SET
+         estado = 'pendiente_facturacion',
+         anulada_en = NULL,
+         ganada_en = now(),
+         monto = EXCLUDED.monto,
+         comercial = EXCLUDED.comercial,
+         ruc = EXCLUDED.ruc,
+         razon_social = EXCLUDED.razon_social,
+         direccion = EXCLUDED.direccion,
+         marcada_por = EXCLUDED.marcada_por,
+         proforma = EXCLUDED.proforma
+       WHERE crm.venta.anulada_en IS NOT NULL`,
       [oportunidad, usuario],
+    );
+  }
+
+  /**
+   * Retira del contable una venta que se deshizo.
+   *
+   * Se anula, no se borra: la entrega ocurrió, y borrar la fila haría
+   * desaparecer de los dos lados algo que alguien pudo empezar a tramitar.
+   * Anulada se ve, y se ve que se deshizo y desde qué etapa.
+   *
+   * Sólo toca lo pendiente de facturar; una facturada o cobrada ni siquiera
+   * llega hasta aquí, porque el movimiento se rechaza antes.
+   */
+  private async anularVenta(oportunidad: number, usuario: string, etapaAnterior: string) {
+    await this.dataSource.query(
+      `UPDATE crm.venta
+          SET estado = 'anulada', anulada_en = now(), marcada_por = $2,
+              nota = coalesce(nota || ' · ', '') ||
+                     'Anulada al sacar la oportunidad de «' || $3 || '»'
+        WHERE oportunidad = $1 AND estado = 'pendiente_facturacion'`,
+      [oportunidad, usuario, etapaAnterior],
     );
   }
 
@@ -797,6 +912,16 @@ export class CrmService {
       `INSERT INTO crm.interaccion (canal, direccion, oportunidad, resultado, texto, autor)
        VALUES ('sistema', 'saliente', $1, 'cambio_etapa', $2, $3)`,
       [oportunidad, `De «${desde}» a «${hasta}»`, usuario],
+    );
+
+    // Y el mismo movimiento como datos, que es de donde sale el embudo. La
+    // frase de arriba es para leerla en la ficha; contar sobre ella obligaría
+    // a descomponer texto, y cambiar esas comillas rompería la medición sin
+    // que nada fallara.
+    await this.dataSource.query(
+      `INSERT INTO crm.oportunidad_etapa (oportunidad, desde, hasta, autor)
+       VALUES ($1, $2, $3, $4)`,
+      [oportunidad, desde, hasta, usuario],
     );
   }
 }

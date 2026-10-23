@@ -1,4 +1,5 @@
 import {
+  accionSobreLaVenta,
   CANAL_SISTEMA,
   esCanalDeMano,
   esDireccion,
@@ -202,5 +203,38 @@ describe('fechaDeInteraccionValida', () => {
   it('tolera el desfase entre los dos relojes', () => {
     expect(fechaDeInteraccionValida(new Date('2026-10-22T15:00:30Z'), ahora)).toBe(true);
     expect(fechaDeInteraccionValida(new Date('2026-10-22T15:05:00Z'), ahora)).toBe(false);
+  });
+});
+
+describe('accionSobreLaVenta', () => {
+  it('ganar registra la venta', () => {
+    expect(accionSobreLaVenta(null, true)).toBe('registrar');
+  });
+
+  /**
+   * El fallo que esto cierra: deshacer un «ganada» puesto por error dejaba
+   * viva la venta, que el contable seguía teniendo pendiente de facturar y que
+   * el cuadro de comisiones seguía contando como dinero en camino.
+   */
+  it('sacarla de ganada anula la venta pendiente', () => {
+    expect(accionSobreLaVenta('pendiente_facturacion', false)).toBe('anular');
+  });
+
+  it('no vuelve a anular una ya anulada', () => {
+    expect(accionSobreLaVenta('anulada', false)).toBe('nada');
+  });
+
+  it('sin venta no hay nada que anular', () => {
+    expect(accionSobreLaVenta(null, false)).toBe('nada');
+  });
+
+  /**
+   * No llegan hasta aquí porque `puedeDesgalardonar` corta antes el
+   * movimiento; si llegaran, existe un documento con efectos tributarios y
+   * anularlo es cosa del contable.
+   */
+  it('no toca una venta facturada ni una cobrada', () => {
+    expect(accionSobreLaVenta('facturada', false)).toBe('nada');
+    expect(accionSobreLaVenta('cobrada', false)).toBe('nada');
   });
 });

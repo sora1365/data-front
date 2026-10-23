@@ -1,8 +1,12 @@
 import {
   conflictos,
+  diaLocal,
+  diasDeLaSemana,
+  diasEntre,
   franjaValida,
   huecosLibres,
   repartirEnColumnas,
+  repartirTareasPorDia,
   seSolapan,
 } from './agenda.reglas';
 
@@ -131,5 +135,73 @@ describe('franjaValida', () => {
   /** Casi siempre es un error de año al teclear, no una reunión de dos años. */
   it('rechaza una duración absurda', () => {
     expect(franjaValida('2026-01-01T09:00:00Z', '2028-01-01T10:00:00Z')).toContain('más de un año');
+  });
+});
+
+describe('tareas en la agenda', () => {
+  const SEMANA = diasDeLaSemana('2026-10-19'); // lunes 19 a domingo 25
+  const HOY = '2026-10-22';
+
+  const tarea = (id: number, vence: string, hecha = false) => ({ id, vence, hecha });
+
+  it('pone cada tarea en el día en que vence', () => {
+    const porDia = repartirTareasPorDia([tarea(1, '2026-10-23')], SEMANA, HOY);
+    expect(porDia.get('2026-10-23')!.map((t) => t.id)).toEqual([1]);
+    expect(porDia.get('2026-10-22')).toEqual([]);
+  });
+
+  /**
+   * Es la regla que justifica toda la función. Dejar lo vencido en su día es
+   * cómo se pierde una tarea: la semana siguiente nadie vuelve a mirar el
+   * jueves anterior.
+   */
+  it('arrastra a hoy lo pendiente que ya venció, contando el retraso', () => {
+    const porDia = repartirTareasPorDia([tarea(1, '2026-10-19')], SEMANA, HOY);
+    expect(porDia.get('2026-10-19')).toEqual([]);
+    const hoy = porDia.get(HOY)!;
+    expect(hoy).toHaveLength(1);
+    expect(hoy[0].vencida).toBe(true);
+    expect(hoy[0].diasDeRetraso).toBe(3);
+  });
+
+  it('deja la tarea terminada en el día en que vencía', () => {
+    const porDia = repartirTareasPorDia([tarea(1, '2026-10-19', true)], SEMANA, HOY);
+    expect(porDia.get('2026-10-19')!.map((t) => t.id)).toEqual([1]);
+    expect(porDia.get(HOY)).toEqual([]);
+  });
+
+  /**
+   * Mirando otra semana, lo vencido no se pinta: ponerlo en el lunes de una
+   * semana cualquiera diría que vence ese día, que es falso.
+   */
+  it('no arrastra nada a una semana que no contiene hoy', () => {
+    const otra = diasDeLaSemana('2026-11-02');
+    const porDia = repartirTareasPorDia([tarea(1, '2026-10-19')], otra, HOY);
+    expect([...porDia.values()].flat()).toEqual([]);
+  });
+
+  it('cuenta los días de retraso aunque haya cambio de horario en medio', () => {
+    // En el hemisferio norte el horario cambia el 25 de octubre de 2026.
+    expect(diasEntre('2026-10-24', '2026-10-26')).toBe(2);
+  });
+
+  it('la semana son siete días consecutivos desde el lunes', () => {
+    expect(SEMANA).toHaveLength(7);
+    expect(SEMANA[0]).toBe('2026-10-19');
+    expect(SEMANA[6]).toBe('2026-10-25');
+  });
+});
+
+describe('diaLocal', () => {
+  /**
+   * El fallo que esto cierra: a las siete de la tarde en Ecuador ya es el día
+   * siguiente en UTC, así que `toISOString()` adelanta «hoy» cada tarde.
+   */
+  it('usa el día del reloj local, no el de UTC', () => {
+    expect(diaLocal(new Date(2026, 9, 22, 19, 30))).toBe('2026-10-22');
+  });
+
+  it('rellena mes y día a dos cifras', () => {
+    expect(diaLocal(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 });

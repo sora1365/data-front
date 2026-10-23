@@ -46,3 +46,7 @@ skills-lock.json
 
 # Graphify generated knowledge graphs and reports
 graphify-out/
+
+# Worktrees que crea el asistente para trabajar en paralelo: son repos
+# aparte y no forman parte de este.
+.claude/worktrees/

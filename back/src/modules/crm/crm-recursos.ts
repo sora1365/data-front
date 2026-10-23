@@ -71,6 +71,13 @@ export const RECURSOS: Record<string, Recurso> = {
    * precisión—, y el tablero suma los importes de cada columna. Sumar cadenas
    * concatena, así que una columna con un solo trato de 480 mostraba «0480.00»
    * como total. Un importe comercial cabe de sobra en un float.
+   *
+   * `cierre_estimado` sale como texto `YYYY-MM-DD` y no como la fecha que es.
+   * El driver convierte una columna `date` en un `Date` de JavaScript a
+   * medianoche local, y al serializarlo a JSON queda
+   * `2026-11-30T05:00:00.000Z`: un día concreto convertido en un instante, que
+   * en un navegador al este de Greenwich se lee como el día siguiente. Una
+   * fecha de cierre no tiene hora, así que viaja como el texto que es.
    */
   deals: {
     tabla: 'crm.oportunidad',
@@ -95,7 +102,8 @@ export const RECURSOS: Record<string, Recurso> = {
       o.id, o.name, o.description, o.producto AS category, o.etapa AS stage,
       o.monto::float8 AS amount, o.comercial AS sales_id, o.indice AS index,
       o.creada_en AS created_at, o.actualizada_en AS updated_at,
-      o.archivada_en AS archived_at, o.cierre_estimado AS expected_closing_date,
+      o.archivada_en AS archived_at,
+      to_char(o.cierre_estimado, 'YYYY-MM-DD') AS expected_closing_date,
       o.contact_ids, o.marca, o.origen_segmento, o.company_id
     `,
   },
@@ -215,6 +223,27 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   /**
+   * El catálogo de productos, de sólo lectura.
+   *
+   * Es del gestor comercial —ahí se definen y se cuelgan de los segmentos— y
+   * el CRM sólo lo lee: para decir qué se le ofrece a una lista, y para colgar
+   * de ahí las plantillas de correo.
+   *
+   * Se expone por el API del CRM y no se consume el de segmentos porque la
+   * frontera entre los dos módulos pasa por aquí, y porque `/segmentos/catalogo`
+   * está roto desde antes de este trabajo (un `coalesce` sin cerrar).
+   */
+  productos: {
+    tabla: 'producto',
+    columnas: ['id', 'nombre', 'unidad', 'activo'],
+    escribibles: [],
+    soloLectura: true,
+    orden: 'nombre',
+    busqueda: ['nombre'],
+    select: `pr.codigo AS id, pr.nombre, pr.unidad, pr.activo`,
+  },
+
+  /**
    * El padrón, para buscar a quién enlazar.
    *
    * No es un recurso del CRM: es la ventana al gestor comercial desde la que
@@ -237,8 +266,20 @@ export const RECURSOS: Record<string, Recurso> = {
     `,
   },
 
+  /**
+   * Las tareas. `due_date` sale como texto `YYYY-MM-DD` por lo mismo que la
+   * fecha de cierre de una oportunidad: es una columna `date`, un día sin
+   * hora, y serializada como instante UTC una tarea que vence el lunes
+   * aparece el domingo en cuanto el navegador está al este de Greenwich.
+   * `done_date` sí es un instante —importa a qué hora se dio por hecha— y va
+   * tal cual.
+   */
   tasks: {
     tabla: 'crm.tarea',
+    select: `
+      t.id, t.text, t.type, to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
+      t.done_date, t.contact_id, t.deal_id, t.sales_id, t.created_at
+    `,
     columnas: [
       'id',
       'text',
@@ -337,6 +378,7 @@ export const ALIAS: Record<string, string> = {
   deals: 'o',
   sales: 's',
   padron: 'p',
+  productos: 'pr',
 };
 
 /**

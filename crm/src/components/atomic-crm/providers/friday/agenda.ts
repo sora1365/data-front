@@ -125,3 +125,46 @@ export const MISMO_DIA = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
+
+// ------------------------------------------------------------------- tareas
+
+export interface TareaDeAgenda {
+  id: string;
+  vence: string;
+  hecha: boolean;
+  texto: string;
+  tipo: string | null;
+  hecha_en: string | null;
+  deal_id: string | null;
+  contact_id: string | null;
+  oportunidad: string | null;
+  empresa: string | null;
+  contacto_nombre: string | null;
+  contacto_apellido: string | null;
+  citas: number;
+  vencida: boolean;
+  diasDeRetraso: number;
+}
+
+export interface DiaDeTareas {
+  dia: string;
+  tareas: TareaDeAgenda[];
+}
+
+/**
+ * El día de una fecha tal como lo ve el reloj de quien mira.
+ *
+ * `toISOString()` daría el día en UTC: a las siete de la tarde en Ecuador ya
+ * es el día siguiente, y la semana que se pide empezaría un día antes.
+ */
+export function comoDia(fecha: Date): string {
+  const dos = (n: number) => String(n).padStart(2, "0");
+  return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
+}
+
+/** Las tareas de la semana, repartidas por el día en que se pintan. */
+export const listarTareas = (semana: Date): Promise<DiaDeTareas[]> =>
+  pedir(`/tareas?lunes=${comoDia(semana)}&hoy=${comoDia(new Date())}`);
+
+export const marcarTarea = (id: string, hecha: boolean) =>
+  pedir(`/tareas/${id}/hecha`, { method: "POST", body: JSON.stringify({ hecha }) });

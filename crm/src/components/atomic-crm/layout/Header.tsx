@@ -106,6 +106,21 @@ const Header = () => {
                     to="/campanias"
                     isActive={currentPath === "/campanias"}
                   />
+                  <NavigationTab
+                    label="Seguimiento"
+                    to="/seguimiento"
+                    isActive={currentPath === "/seguimiento"}
+                  />
+                  <NavigationTab
+                    label="Precios"
+                    to="/precios"
+                    isActive={currentPath === "/precios"}
+                  />
+                  <NavigationTab
+                    label="Tableros"
+                    to="/tableros"
+                    isActive={currentPath === "/tableros"}
+                  />
                 </nav>
               </div>
               <div className="flex items-center">
