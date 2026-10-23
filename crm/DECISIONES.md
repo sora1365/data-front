@@ -91,11 +91,32 @@ borraron: dos fichas de la misma oportunidad llevan a trabajar en la que no es,
 y a añadir cosas a la que se va a tirar. El menú de FRIDAY conserva un enlace
 externo al CRM y nada más.
 
-**Lo que se perdió al borrarlas y falta rehacer:** la anotación manual de
+**Lo que se perdió al borrarlas, ya rehecho:** la anotación manual de
 interacciones —llamada, visita, WhatsApp hablado por fuera— que vivía en
-`Oportunidad.jsx`. El back sigue entero (`POST /crm/oportunidades/:id/interaccion`,
-con su lista cerrada de canales y el rechazo de fechas futuras); lo que no hay
-es dónde hacerlo desde la pantalla.
+`Oportunidad.jsx`. Vuelve como `deals/Historial.tsx`, dentro de la ficha de la
+oportunidad, que es donde está la persona cuando acaba de colgar el teléfono.
+El back no se tocó: ya estaba entero
+(`POST /crm/oportunidades/:id/interaccion`, con su lista cerrada de canales y
+el rechazo de fechas futuras).
+
+La lista de canales está escrita dos veces, aquí y en `crm.reglas.ts`, porque
+los dos proyectos no comparten código. No se adivina desde el servidor a
+propósito: un desplegable que se llena por red deja la pantalla sin poder
+anotar nada cuando esa llamada falla.
+
+## Una fecha de cierre no tiene hora
+
+`cierre_estimado` es una columna `date`, y el driver la convierte en un `Date`
+de JavaScript a medianoche local: al serializarla a JSON sale
+`2026-11-30T05:00:00.000Z`. Un día concreto convertido en un instante, que en
+un navegador al este de Greenwich se lee como el día siguiente. Sale como
+texto `YYYY-MM-DD`, que es lo que la pantalla espera y lo que la fecha es.
+
+Hasta aquí la ficha ni siquiera abría: `formatISODateString` **lanza** cuando
+lo que recibe no es `YYYY-MM-DD`, y la guarda que traía Atomic era
+`isValid(new Date(...))`, que deja pasar el nulo —`new Date(null)` es el 1 de
+enero de 1970, una fecha válida—. Una oportunidad recién abierta, sin fecha de
+cierre, mostraba «Something went wrong» en lugar de la ficha entera.
 
 ## Agenda
 

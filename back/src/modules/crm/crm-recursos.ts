@@ -71,6 +71,13 @@ export const RECURSOS: Record<string, Recurso> = {
    * precisión—, y el tablero suma los importes de cada columna. Sumar cadenas
    * concatena, así que una columna con un solo trato de 480 mostraba «0480.00»
    * como total. Un importe comercial cabe de sobra en un float.
+   *
+   * `cierre_estimado` sale como texto `YYYY-MM-DD` y no como la fecha que es.
+   * El driver convierte una columna `date` en un `Date` de JavaScript a
+   * medianoche local, y al serializarlo a JSON queda
+   * `2026-11-30T05:00:00.000Z`: un día concreto convertido en un instante, que
+   * en un navegador al este de Greenwich se lee como el día siguiente. Una
+   * fecha de cierre no tiene hora, así que viaja como el texto que es.
    */
   deals: {
     tabla: 'crm.oportunidad',
@@ -95,7 +102,8 @@ export const RECURSOS: Record<string, Recurso> = {
       o.id, o.name, o.description, o.producto AS category, o.etapa AS stage,
       o.monto::float8 AS amount, o.comercial AS sales_id, o.indice AS index,
       o.creada_en AS created_at, o.actualizada_en AS updated_at,
-      o.archivada_en AS archived_at, o.cierre_estimado AS expected_closing_date,
+      o.archivada_en AS archived_at,
+      to_char(o.cierre_estimado, 'YYYY-MM-DD') AS expected_closing_date,
       o.contact_ids, o.marca, o.origen_segmento, o.company_id
     `,
   },

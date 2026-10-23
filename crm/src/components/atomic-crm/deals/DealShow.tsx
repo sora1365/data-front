@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { isValid } from "date-fns";
 import { Archive, ArchiveRestore } from "lucide-react";
 import {
   InfiniteListBase,
@@ -27,6 +26,7 @@ import { NotesIterator } from "../notes/NotesIterator";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { ContactList } from "./ContactList";
+import { Historial } from "./Historial";
 import { findDealLabel, formatISODateString } from "./dealUtils";
 
 export const DealShow = ({ open, id }: { open: boolean; id?: string }) => {
@@ -47,6 +47,19 @@ export const DealShow = ({ open, id }: { open: boolean; id?: string }) => {
     </Dialog>
   );
 };
+
+/**
+ * Si una fecha de cierre se puede formatear.
+ *
+ * `formatISODateString` **lanza** cuando lo que recibe no es `YYYY-MM-DD`, y
+ * la guarda original era `isValid(new Date(...))`, que deja pasar el nulo:
+ * `new Date(null)` es el 1 de enero de 1970, una fecha perfectamente válida.
+ * Así que una oportunidad sin fecha de cierre —el caso normal recién abierta—
+ * reventaba la ficha entera, y en su sitio salía «Something went wrong». Sin
+ * fecha no es un error: es que todavía no se sabe.
+ */
+const esFechaISO = (valor: unknown): valor is string =>
+  typeof valor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(valor);
 
 const DealShowContent = () => {
   const translate = useTranslate();
@@ -92,11 +105,14 @@ const DealShowContent = () => {
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm">
-                  {isValid(new Date(record.expected_closing_date))
+                  {esFechaISO(record.expected_closing_date)
                     ? formatISODateString(record.expected_closing_date)
-                    : translate("resources.deals.invalid_date")}
+                    : record.expected_closing_date
+                      ? translate("resources.deals.invalid_date")
+                      : "—"}
                 </span>
-                {new Date(record.expected_closing_date) < new Date() ? (
+                {esFechaISO(record.expected_closing_date) &&
+                new Date(record.expected_closing_date) < new Date() ? (
                   <Badge variant="destructive">
                     {translate("crm.common.past")}
                   </Badge>
@@ -109,7 +125,7 @@ const DealShowContent = () => {
                 {translate("resources.deals.fields.amount")}
               </span>
               <span className="text-sm">
-                {record.amount.toLocaleString("en-US", {
+                {(record.amount ?? 0).toLocaleString("en-US", {
                   notation: "compact",
                   style: "currency",
                   currency,
@@ -165,6 +181,11 @@ const DealShowContent = () => {
               <p className="text-sm leading-6">{record.description}</p>
             </div>
           )}
+
+          <div className="m-4">
+            <Separator className="mb-4" />
+            <Historial dealId={record.id} />
+          </div>
 
           <div className="m-4">
             <Separator className="mb-4" />
