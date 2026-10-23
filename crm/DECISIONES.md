@@ -481,3 +481,22 @@ El orden pone primero **a quien nunca se ha llamado**, que es lo contrario de
 lo que pasa solo. Y el rendimiento por segmento contesta la pregunta que
 justifica tener segmentos: de lo que se llamó, cuánto acabó en oportunidad. Es
 el embudo de antes del embudo.
+
+### Guiones de llamada, al lado de la lista
+
+Las primeras llamadas de alguien nuevo son malas no porque no sepa vender,
+sino porque no sabe qué decir de **este** producto a **esta** empresa, y lo
+aprende a costa de los primeros cuarenta números de la lista.
+
+Lo que de verdad se guarda son **las objeciones y su respuesta**. La apertura
+se aprende en tres llamadas; «ya tengo contador» se contesta bien o se pierde
+la venta, y esa respuesta vive hoy en la cabeza de quien lleva más tiempo.
+
+Gana el guion más específico —producto y segmento, luego producto, luego
+segmento, luego el general—, el mismo orden que las reglas de comisión: dos
+formas distintas de resolver «cuál de estos aplica» en el mismo sistema
+obligan a recordar cuál es cuál, y es la clase de detalle que se recuerda al
+revés. La pantalla dice de qué ámbito es el guion que está enseñando.
+
+Una objeción sin respuesta no se guarda: media objeción en la pantalla de
+quien está llamando es peor que ninguna, porque la lee y se queda a medias.

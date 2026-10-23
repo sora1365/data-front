@@ -135,3 +135,72 @@ export const NOMBRE_DE_RESULTADO: Record<string, string> = {
   no_contactar: "Que no lo llamen",
   oportunidad: "Abrí oportunidad",
 };
+
+// ------------------------------------------------------------------ guiones
+
+export interface Objecion {
+  objecion: string;
+  respuesta: string;
+}
+
+export interface Guion {
+  codigo: string;
+  nombre: string;
+  producto: string | null;
+  segmento: string | null;
+  producto_nombre?: string | null;
+  segmento_nombre?: string | null;
+  apertura: string | null;
+  preguntas: string[];
+  objeciones: Objecion[];
+  cierre: string | null;
+  activo: boolean;
+}
+
+/**
+ * El guion de esta llamada, o null si no hay ninguno que encaje.
+ *
+ * Que no haya es un caso normal: se llama igual, sólo que sin ayuda. Por eso
+ * un 404 aquí no es un error que haya que enseñar.
+ */
+export const guionAplicable = async (
+  producto?: string,
+  segmento?: string,
+): Promise<Guion | null> => {
+  const busca = new URLSearchParams();
+  if (producto) busca.set("producto", producto);
+  if (segmento) busca.set("segmento", segmento);
+  const respuesta = await fetch(`${API}/crm/guiones/aplicable?${busca}`, {
+    headers: { "X-Usuario": usuarioActual() },
+  });
+  if (!respuesta.ok) return null;
+  const guion = await respuesta.json();
+  return guion && guion.codigo ? guion : null;
+};
+
+export const listarGuiones = async (): Promise<Guion[]> => {
+  const respuesta = await fetch(`${API}/crm/guiones`, {
+    headers: { "X-Usuario": usuarioActual() },
+  });
+  if (!respuesta.ok) return [];
+  return respuesta.json();
+};
+
+export const guardarGuion = async (def: Record<string, unknown>): Promise<Guion> => {
+  const respuesta = await fetch(`${API}/crm/guiones`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Usuario": usuarioActual() },
+    body: JSON.stringify(def),
+  });
+  if (!respuesta.ok) {
+    let mensaje = `${respuesta.status} ${respuesta.statusText}`;
+    try {
+      const cuerpo = await respuesta.json();
+      if (cuerpo?.message) mensaje = cuerpo.message;
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+    throw new Error(mensaje);
+  }
+  return respuesta.json();
+};
