@@ -23,6 +23,11 @@ const RECURSOS_DEL_CRM = [
   // No es un recurso de Atomic: es la ventana al padrón de FRIDAY desde la que
   // se crea una empresa sin teclear sus datos.
   'padron',
+  // Tampoco se declara en `CRM.tsx`: lo piden por referencia las fichas de
+  // oportunidad y de empresa y el selector de contacto de las tareas. Faltó
+  // hasta que hubo oportunidades con contactos, y entonces la ficha avisaba de
+  // «recurso desconocido».
+  'contacts_summary',
 ];
 
 describe('recursos del CRM', () => {

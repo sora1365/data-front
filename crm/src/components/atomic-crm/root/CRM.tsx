@@ -62,6 +62,7 @@ import { NoteShowPage } from "../notes/NoteShowPage.tsx";
 import { WhatsappPage } from "../whatsapp/WhatsappPage";
 import { AgendaPage } from "../agenda/AgendaPage";
 import { CampaniasPage } from "../campanias/CampaniasPage";
+import { LeadsPage } from "../leads/LeadsPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
 
@@ -273,6 +274,7 @@ const DesktopAdmin = (
         <Route path={WhatsappPage.path} element={<WhatsappPage />} />
         <Route path={AgendaPage.path} element={<AgendaPage />} />
         <Route path={CampaniasPage.path} element={<CampaniasPage />} />
+        <Route path={LeadsPage.path} element={<LeadsPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />

@@ -314,6 +314,24 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 };
 
+/**
+ * `contacts_summary` es la vista de Supabase con la que Atomic pinta los
+ * contactos dentro de otras fichas —los de una oportunidad, los de una
+ * empresa, el selector de contacto de una tarea—: el contacto más el nombre de
+ * su empresa. Sin ella esas listas fallan con «recurso desconocido», y no se
+ * notaba porque ninguna oportunidad tenía contactos hasta que los leads
+ * empezaron a convertirse con el suyo.
+ *
+ * Es de sólo lectura: los contactos se escriben por `contacts`.
+ */
+RECURSOS.contacts_summary = {
+  ...RECURSOS.contacts,
+  // `company_name` sale en el SELECT pero no está en `columnas`: no es una
+  // columna de la tabla, y filtrar u ordenar por ella sería un error de SQL.
+  escribibles: [],
+  select: `t.*, (SELECT e.name FROM crm.empresa e WHERE e.id = t.company_id) AS company_name`,
+};
+
 /** El alias que usa cada SELECT a medida. */
 export const ALIAS: Record<string, string> = {
   deals: 'o',

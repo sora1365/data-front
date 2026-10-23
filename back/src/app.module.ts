@@ -18,6 +18,7 @@ import { CrmModule } from './modules/crm/crm.module';
 import { WhatsappModule } from './modules/crm/whatsapp/whatsapp.module';
 import { AgendaModule } from './modules/crm/agenda/agenda.module';
 import { CampaniasModule } from './modules/crm/campanias/campanias.module';
+import { LeadsModule } from './modules/crm/leads/leads.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -60,6 +61,7 @@ import { databaseSslConfig } from './database/database-ssl';
     WhatsappModule,
     AgendaModule,
     CampaniasModule,
+    LeadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

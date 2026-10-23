@@ -60,8 +60,14 @@ const CAMPOS_SUJETO = `
 export interface AbrirOportunidad {
   /** Opcional: si no llega, se usa el nombre del producto. */
   nombre?: string;
-  tipoSujeto: string;
-  clave: string;
+  /**
+   * El cliente: o un sujeto del padrón, o una empresa que ya está en el CRM.
+   * Un lead que convierte suele ser lo segundo —no tiene RUC en el padrón—, y
+   * exigirle sujeto haría imposible venderle a quien llegó por la web.
+   */
+  tipoSujeto?: string;
+  clave?: string;
+  empresaId?: number;
   producto: string;
   marca: string;
   monto?: number | null;
@@ -237,9 +243,13 @@ export class CrmService {
   async abrir(datos: AbrirOportunidad, usuario: string) {
     // La empresa se busca —o se crea desde el padrón— antes de nada: el sujeto
     // ya no vive en la oportunidad, y es la empresa la que sabe si hay uno.
-    const empresa = await this.empresaDeSujeto(datos.tipoSujeto, datos.clave, usuario);
+    const empresa = await this.empresaParaAbrir(datos, usuario);
 
-    const estado = await this.estadoComercial(datos.tipoSujeto, datos.clave);
+    // Las reglas del gestor comercial sólo aplican a quien está en el padrón:
+    // una empresa sin sujeto no tiene estado comercial que respetar ni mover.
+    const estado = empresa.tipo_sujeto
+      ? await this.estadoComercial(empresa.tipo_sujeto, empresa.clave)
+      : null;
     if (estado?.estado === 'no_contactar') {
       throw new ConflictException(
         `Ese sujeto está marcado como «no contactar»${
@@ -302,9 +312,9 @@ export class CrmService {
       throw e;
     }
 
-    const nuevoEstado = estadoAlAbrir(estado?.estado ?? null);
+    const nuevoEstado = empresa.tipo_sujeto ? estadoAlAbrir(estado?.estado ?? null) : null;
     if (nuevoEstado) {
-      await this.segmentos.marcarEstado(datos.tipoSujeto, datos.clave, nuevoEstado);
+      await this.segmentos.marcarEstado(empresa.tipo_sujeto, empresa.clave, nuevoEstado);
     }
 
     return this.oportunidad(creada.id);
@@ -692,6 +702,26 @@ export class CrmService {
       [tipoSujeto, clave, usuario],
     );
     return filasDe(res)[0];
+  }
+
+  /** La empresa sobre la que se abre: la indicada, o la del sujeto. */
+  private async empresaParaAbrir(
+    datos: AbrirOportunidad,
+    usuario: string,
+  ): Promise<{ id: number; tipo_sujeto: string | null; clave: string | null }> {
+    if (datos.empresaId != null) {
+      const filas = await this.dataSource.query(
+        `SELECT id, tipo_sujeto, clave FROM crm.empresa WHERE id = $1`,
+        [datos.empresaId],
+      );
+      if (!filas[0]) throw new NotFoundException(`No existe la empresa ${datos.empresaId}`);
+      return filas[0];
+    }
+    if (!datos.tipoSujeto || !datos.clave) {
+      throw new BadRequestException('Falta el cliente: una empresa del CRM o un sujeto del padrón.');
+    }
+    const empresa = await this.empresaDeSujeto(datos.tipoSujeto, datos.clave, usuario);
+    return { id: empresa.id, tipo_sujeto: datos.tipoSujeto, clave: datos.clave };
   }
 
   private async nombreDeProducto(codigo: string): Promise<string> {

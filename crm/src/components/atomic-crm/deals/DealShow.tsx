@@ -91,12 +91,21 @@ const DealShowContent = () => {
                 {translate("resources.deals.fields.expected_closing_date")}
               </span>
               <div className="flex items-center gap-2">
+                {/* Las oportunidades que abre FRIDAY —desde el gestor o desde un
+                    lead— nacen sin fecha de cierre, y `new Date(null)` es una
+                    fecha válida (1970), así que la comprobación de Atomic la
+                    dejaba pasar y `formatISODateString` reventaba la ficha
+                    entera. La fecha llega además con hora cuando viene de
+                    Postgres; sólo interesa el día. */}
                 <span className="text-sm">
-                  {isValid(new Date(record.expected_closing_date))
-                    ? formatISODateString(record.expected_closing_date)
-                    : translate("resources.deals.invalid_date")}
+                  {!record.expected_closing_date
+                    ? "—"
+                    : isValid(new Date(record.expected_closing_date))
+                      ? formatISODateString(String(record.expected_closing_date).slice(0, 10))
+                      : translate("resources.deals.invalid_date")}
                 </span>
-                {new Date(record.expected_closing_date) < new Date() ? (
+                {record.expected_closing_date &&
+                new Date(record.expected_closing_date) < new Date() ? (
                   <Badge variant="destructive">
                     {translate("crm.common.past")}
                   </Badge>
