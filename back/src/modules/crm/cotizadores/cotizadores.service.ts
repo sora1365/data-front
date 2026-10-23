@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { costoHoraDeTarea } from '../contable/contable.reglas';
 import {
   calcularCotizacion,
   problemasDeConfiguracion,
@@ -85,7 +86,7 @@ export class CotizadoresService {
       `SELECT id, orden, nombre,
               horas_fijas::float8 AS horas_fijas,
               horas_por_unidad::float8 AS horas_por_unidad,
-              variable, costo_hora::float8 AS costo_hora
+              variable, costo_hora::float8 AS costo_hora, perfil
          FROM crm.cotizador_tarea WHERE cotizador = $1 ORDER BY orden`,
       [codigo],
     );
@@ -161,8 +162,8 @@ export class CotizadoresService {
           orden += 1;
           await manager.query(
             `INSERT INTO crm.cotizador_tarea
-               (cotizador, orden, nombre, horas_fijas, horas_por_unidad, variable, costo_hora)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+               (cotizador, orden, nombre, horas_fijas, horas_por_unidad, variable, costo_hora, perfil)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
             [
               codigo,
               orden,
@@ -173,6 +174,7 @@ export class CotizadoresService {
               t.costo_hora === null || t.costo_hora === undefined || t.costo_hora === ('' as any)
                 ? null
                 : Number(t.costo_hora),
+              (t as any).perfil || null,
             ],
           );
         }
@@ -192,6 +194,27 @@ export class CotizadoresService {
   async calcular(codigo: string, entradas: Record<string, unknown>) {
     const cotizador = await this.obtener(codigo);
     const valores = valoresConDefecto(cotizador.variables, entradas ?? {});
+
+    /**
+     * El costo de cada tarea sale de la nómina cuando tiene perfil.
+     *
+     * Es lo que hace que un cotizador no se quede con el sueldo del año
+     * pasado: tecleado a mano, el costo hora envejece y todo lo que se cotiza
+     * sale barato sin que nadie lo note. Lo escrito a propósito en la tarea
+     * sigue mandando sobre la nómina, porque alguien lo puso sabiendo qué
+     * hacía.
+     */
+    const perfiles = await this.dataSource.query(
+      `SELECT perfil, costo_hora::float8 AS costo_hora FROM crm.costo_personal`,
+    );
+    const porPerfil: Record<string, number> = {};
+    for (const p of perfiles) porPerfil[p.perfil] = Number(p.costo_hora);
+
+    const tareas = cotizador.tareas.map((t: any) => {
+      const { costo, origen } = costoHoraDeTarea(t, porPerfil, Number(cotizador.costo_hora));
+      return { ...t, costo_hora: costo, origen_costo: origen };
+    });
+
     return {
       cotizador: {
         codigo: cotizador.codigo,
@@ -201,7 +224,7 @@ export class CotizadoresService {
       },
       valores,
       problemas: cotizador.problemas,
-      ...calcularCotizacion(cotizador, cotizador.tareas, valores),
+      ...calcularCotizacion(cotizador, tareas, valores),
     };
   }
 

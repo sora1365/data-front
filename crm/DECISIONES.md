@@ -350,3 +350,41 @@ de la tarjeta es una estimación interna que casi nunca se corrige después de
 cotizar. `monto` sigue siendo la base sin IVA —subtotal menos descuentos—, que
 es sobre lo que se calcula la comisión; el IVA lo recompone el contable desde
 las líneas.
+
+## El API del contable: lo que entra y lo que sale
+
+El contable no está en este repositorio, así que esto es un contrato, no una
+integración: tablas que guardan lo que el otro sistema empuja y consultas que
+le devuelven lo que necesita. Con las tablas vacías el CRM funciona igual.
+El detalle está en `back/src/modules/crm/contable/README.md`.
+
+**Sin llave configurada, la puerta está cerrada** (503), no abierta. Es la
+decisión que importa: un guardia que se desactiva solo cuando falta su
+configuración protege hasta el día del despliegue en que se olvida la
+variable.
+
+**El inventario se copia, no se consulta en vivo.** Cotizar no puede depender
+de que el otro sistema esté levantado: una pantalla en blanco cuando el
+contable está en mantenimiento es una pantalla que nadie usa. Se enseña de
+cuándo es el dato, que es lo que permite desconfiar de él.
+
+**Llega el catálogo completo y lo que no viene se desactiva**, en vez de
+diferenciales: perder un mensaje deja al CRM con precios viejos para siempre.
+Y se desactiva en vez de borrarse, porque una línea de proforma de hace dos
+meses tiene que seguir diciendo qué se ofreció.
+
+**De la nómina entra el costo del perfil, nunca sueldos nominales.** Un CRM
+con la nómina dentro acaba enseñando sueldos a quien no debería verlos, y para
+cotizar basta con lo que cuesta la hora de un perfil. El cotizador lo usa: con
+el costo hora tecleado a mano se queda con el sueldo del año pasado y todo
+sale barato sin que nadie lo note. El orden es lo escrito a propósito en la
+tarea, luego su perfil, luego el del cotizador.
+
+**Cada aviso de cobro se guarda, no sólo el estado final.** La pregunta que
+llega después no es «cómo está» sino «cuándo se facturó y cuándo entró el
+dinero». Una factura anulada y reemitida son dos avisos, no uno corregido. La
+`referencia` los hace repetibles: el contable reintenta, y sin eso un cobro
+reenviado contaría dos veces en las comisiones.
+
+Las fechas son las del aviso, no las de llegada: con `now()`, una venta de fin
+de mes registrada el día 1 cambia de periodo y con él de comisión.

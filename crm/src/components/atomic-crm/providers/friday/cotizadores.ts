@@ -19,6 +19,8 @@ export interface TareaDeCotizador {
   horas_por_unidad: number;
   variable: string | null;
   costo_hora: number | null;
+  /** De quién es el tiempo: el perfil de nómina que hace la tarea. */
+  perfil?: string | null;
 }
 
 export interface Cotizador {
@@ -121,3 +123,47 @@ export const NOMBRE_DE_MODO: Record<string, string> = {
   sobre_costo: "sobre el costo",
   sobre_precio: "sobre el precio",
 };
+
+// ----------------------------------------------- lo que llega del contable
+
+export interface Articulo {
+  codigo: string;
+  nombre: string;
+  unidad: string | null;
+  precio: number | null;
+  iva: number | null;
+  stock: number | null;
+  sincronizado_en: string;
+}
+
+export interface PerfilDeNomina {
+  perfil: string;
+  nombre: string;
+  costo_hora: number;
+  personas: number | null;
+  sincronizado_en: string;
+}
+
+export interface EstadoDelContable {
+  conectado: boolean;
+  inventario: { total: number; ultima: string | null };
+  nomina: { total: number; ultima: string | null };
+  movimientos: { total: number; ultima: string | null };
+}
+
+const INVENTARIO = `${API}/crm/inventario`;
+
+async function pedirInventario(ruta: string) {
+  const respuesta = await fetch(`${INVENTARIO}${ruta}`, {
+    headers: { "X-Usuario": usuarioActual() },
+  });
+  if (!respuesta.ok) throw new Error(`${respuesta.status} ${respuesta.statusText}`);
+  return respuesta.json();
+}
+
+export const listarArticulos = (busqueda?: string): Promise<Articulo[]> =>
+  pedirInventario(busqueda ? `?q=${encodeURIComponent(busqueda)}` : "");
+
+export const listarPerfiles = (): Promise<PerfilDeNomina[]> => pedirInventario("/perfiles");
+
+export const estadoDelContable = (): Promise<EstadoDelContable> => pedirInventario("/estado");

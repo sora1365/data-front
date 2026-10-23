@@ -13,6 +13,12 @@ import {
   type Cotizador,
   type TareaDeCotizador,
   type VariableDeCotizador,
+  estadoDelContable,
+  listarArticulos,
+  listarPerfiles,
+  type Articulo,
+  type EstadoDelContable,
+  type PerfilDeNomina,
 } from "../providers/friday/cotizadores";
 import {
   dinero,
@@ -31,7 +37,7 @@ import {
  * nadie podía decir por qué un cliente paga 480 y el de al lado 700.
  */
 export const PreciosPage = () => {
-  const [pestana, setPestana] = useState<"lista" | "cotizadores">("lista");
+  const [pestana, setPestana] = useState<"lista" | "cotizadores" | "inventario">("lista");
 
   return (
     <div className="flex flex-col gap-4 p-1">
@@ -52,10 +58,23 @@ export const PreciosPage = () => {
           >
             Cotizadores
           </Button>
+          <Button
+            size="sm"
+            variant={pestana === "inventario" ? "default" : "outline"}
+            onClick={() => setPestana("inventario")}
+          >
+            Inventario
+          </Button>
         </div>
       </header>
 
-      {pestana === "lista" ? <ListaDePrecios /> : <Cotizadores />}
+      {pestana === "lista" ? (
+        <ListaDePrecios />
+      ) : pestana === "cotizadores" ? (
+        <Cotizadores />
+      ) : (
+        <Inventario />
+      )}
     </div>
   );
 };
@@ -263,8 +282,16 @@ const Editor = ({
 }) => {
   const [def, setDef] = useState(cotizador);
   const [calculo, setCalculo] = useState<Calculo | null>(null);
+  const [perfiles, setPerfiles] = useState<PerfilDeNomina[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => setDef(cotizador), [cotizador]);
+
+  // Los perfiles de la nómina, para poder colgar de ellos cada tarea.
+  useEffect(() => {
+    listarPerfiles().then(setPerfiles).catch(() => setPerfiles([]));
+  }, []);
 
   useEffect(() => setDef(cotizador), [cotizador]);
 
@@ -449,6 +476,7 @@ const Editor = ({
                 <th className="font-normal pb-1 w-24 text-right">Horas fijas</th>
                 <th className="font-normal pb-1 w-28 text-right">Horas × unidad</th>
                 <th className="font-normal pb-1 w-40">Por cada</th>
+                <th className="font-normal pb-1 w-40">Quién la hace</th>
                 <th className="font-normal pb-1 w-28 text-right">Costo hora</th>
               </tr>
             </thead>
@@ -486,10 +514,33 @@ const Editor = ({
                       ))}
                     </select>
                   </td>
+                  {/*
+                    Con perfil, el costo sale de la nómina que manda el
+                    contable y se actualiza solo. El número de al lado sigue
+                    ganando si alguien lo escribe: se pone a propósito.
+                  */}
+                  <td className="py-1">
+                    <select
+                      className="h-7 w-full rounded-md border bg-transparent px-1 text-sm"
+                      value={t.perfil ?? ""}
+                      onChange={(e) => cambiarTarea(i, "perfil", e.target.value)}
+                    >
+                      <option value="">— sin perfil —</option>
+                      {perfiles.map((p) => (
+                        <option key={p.perfil} value={p.perfil}>
+                          {p.nombre} ({dinero(p.costo_hora)}/h)
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="py-1">
                     <Input
                       className="h-7 text-right"
-                      placeholder={String(def.costo_hora)}
+                      placeholder={
+                        t.perfil
+                          ? String(perfiles.find((p) => p.perfil === t.perfil)?.costo_hora ?? def.costo_hora)
+                          : String(def.costo_hora)
+                      }
                       value={t.costo_hora === null ? "" : String(t.costo_hora)}
                       onChange={(e) => cambiarTarea(i, "costo_hora", e.target.value)}
                     />
@@ -559,3 +610,151 @@ const Campo = ({
     <Input className={`h-9 ${ancho}`} value={valor} onChange={(e) => alCambiar(e.target.value)} />
   </label>
 );
+
+// --------------------------------------------------------- inventario
+
+/**
+ * Lo que llega del contable: artículos y costo del personal.
+ *
+ * Es de sólo lectura a propósito. Un precio de inventario corregido aquí dura
+ * hasta la siguiente sincronización, y en medio los dos sistemas dicen cosas
+ * distintas sobre lo mismo. Lo que sí se enseña es **de cuándo es el dato**,
+ * que es lo que permite desconfiar de él cuando lleva días sin moverse.
+ */
+const Inventario = () => {
+  const [articulos, setArticulos] = useState<Articulo[]>([]);
+  const [perfiles, setPerfiles] = useState<PerfilDeNomina[]>([]);
+  const [estado, setEstado] = useState<EstadoDelContable | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([listarArticulos(busqueda), listarPerfiles(), estadoDelContable()])
+      .then(([a, p, e]) => {
+        setArticulos(a);
+        setPerfiles(p);
+        setEstado(e);
+        setError(null);
+      })
+      .catch((e) => setError(e.message));
+  }, [busqueda]);
+
+  const cuando = (fecha: string | null) =>
+    fecha ? new Date(fecha).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" }) : "nunca";
+
+  return (
+    <div className="flex flex-col gap-3">
+      {estado && (
+        <div className="border rounded-lg p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={estado.conectado ? "default" : "secondary"}>
+              {estado.conectado ? "Conectado al contable" : "Sin llave configurada"}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              Inventario: {estado.inventario.total} artículos · {cuando(estado.inventario.ultima)}
+              {" · "}
+              Nómina: {estado.nomina.total} perfiles · {cuando(estado.nomina.ultima)}
+              {" · "}
+              Avisos de cobro: {estado.movimientos.total} · {cuando(estado.movimientos.ultima)}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Esto lo escribe el contable por su API; desde aquí sólo se mira.
+          </p>
+        </div>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="border rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-muted-foreground">Artículos</p>
+          <Input
+            className="h-8 w-56"
+            placeholder="Buscar por nombre o código"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
+        {articulos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No hay artículos. Los manda el contable a <code>POST /crm/contable/inventario</code>.
+          </p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground text-left">
+                <th className="font-normal pb-1">Código</th>
+                <th className="font-normal pb-1">Artículo</th>
+                <th className="font-normal pb-1 text-right w-24">Precio</th>
+                <th className="font-normal pb-1 text-right w-16">IVA</th>
+                <th className="font-normal pb-1 text-right w-20">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {articulos.map((a) => (
+                <tr key={a.codigo} className="border-t">
+                  <td className="py-1 pr-2 text-muted-foreground">{a.codigo}</td>
+                  <td className="py-1 pr-2">{a.nombre}</td>
+                  <td className="py-1 text-right tabular-nums">
+                    {a.precio === null ? "—" : dinero(a.precio)}
+                  </td>
+                  <td className="py-1 text-right tabular-nums">
+                    {a.iva === null ? "—" : `${a.iva}%`}
+                  </td>
+                  {/*
+                    Sin existencias se dice, no se esconde: cotizar algo que no
+                    hay es prometer una fecha de entrega que no se va a cumplir.
+                  */}
+                  <td className="py-1 text-right tabular-nums">
+                    {a.stock === null ? (
+                      "—"
+                    ) : a.stock <= 0 ? (
+                      <span className="text-destructive">sin stock</span>
+                    ) : (
+                      a.stock
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="border rounded-lg p-3">
+        <p className="text-xs text-muted-foreground mb-2">
+          Costo del personal · es lo que usan las tareas del cotizador que tienen perfil
+        </p>
+        {perfiles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Sin perfiles. Los manda el contable a <code>POST /crm/contable/nomina</code>.
+          </p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground text-left">
+                <th className="font-normal pb-1">Perfil</th>
+                <th className="font-normal pb-1 text-right w-28">Costo hora</th>
+                <th className="font-normal pb-1 text-right w-24">Personas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perfiles.map((p) => (
+                <tr key={p.perfil} className="border-t">
+                  <td className="py-1">{p.nombre}</td>
+                  <td className="py-1 text-right tabular-nums">{dinero(p.costo_hora)}</td>
+                  <td className="py-1 text-right tabular-nums">{p.personas ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
