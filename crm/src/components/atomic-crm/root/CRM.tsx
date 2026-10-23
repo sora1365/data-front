@@ -65,6 +65,7 @@ import { CampaniasPage } from "../campanias/CampaniasPage";
 import { LeadsPage } from "../leads/LeadsPage";
 import { TablerosPage } from "../tableros/TablerosPage";
 import { PreciosPage } from "../precios/PreciosPage";
+import { PostventaPage } from "../postventa/PostventaPage";
 import { SeguimientoPage } from "../seguimiento/SeguimientoPage";
 
 const defaultStore = localStorageStore(undefined, "CRM");
@@ -281,6 +282,7 @@ const DesktopAdmin = (
         <Route path={TablerosPage.path} element={<TablerosPage />} />
         <Route path={SeguimientoPage.path} element={<SeguimientoPage />} />
         <Route path={PreciosPage.path} element={<PreciosPage />} />
+        <Route path={PostventaPage.path} element={<PostventaPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
       <Resource name="contacts" {...contacts} />

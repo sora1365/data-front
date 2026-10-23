@@ -99,12 +99,25 @@ export function motivoDeCorte(etapa: {
  * mano salta sola igual.
  */
 export function impedimentoParaIniciar(
-  secuencia: { activa: boolean; marca: string | null; producto: string | null },
+  secuencia: {
+    activa: boolean;
+    marca: string | null;
+    producto: string | null;
+    /** `venta` es postventa: arranca precisamente cuando ya se cerró. */
+    aplica_a?: 'oportunidad' | 'venta';
+  },
   oportunidad: { marca: string; producto: string; archivada: boolean; cerrada: boolean },
 ): string | null {
   if (!secuencia.activa) return 'Esa secuencia está desactivada.';
   if (oportunidad.archivada) return 'La oportunidad está archivada.';
-  if (oportunidad.cerrada) return 'La oportunidad ya está cerrada.';
+
+  // Una secuencia de postventa sobre una venta que no se ha cerrado es
+  // felicitar a alguien por algo que no ha comprado.
+  if (secuencia.aplica_a === 'venta') {
+    if (!oportunidad.cerrada) return 'Esa secuencia es de postventa: la venta todavía no se cerró.';
+  } else if (oportunidad.cerrada) {
+    return 'La oportunidad ya está cerrada.';
+  }
   if (secuencia.marca && secuencia.marca !== oportunidad.marca) {
     return 'Esa secuencia es de otra marca.';
   }

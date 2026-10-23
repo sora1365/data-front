@@ -583,7 +583,7 @@ export class CrmService {
        */
       `INSERT INTO crm.venta
          (oportunidad, marca, company_id, tipo_sujeto, clave, producto, monto, comercial,
-          ruc, razon_social, direccion, marcada_por, proforma)
+          ruc, razon_social, direccion, marcada_por, proforma, periodicidad, renueva_en)
        SELECT o.id, o.marca, emp.id, emp.tipo_sujeto, emp.clave, o.producto,
               coalesce(p.subtotal - p.descuento, o.monto),
               o.comercial,
@@ -591,7 +591,22 @@ export class CrmService {
               coalesce(p.razon_social, emp.name),
               coalesce(p.direccion, emp.address),
               $2,
-              p.id
+              p.id,
+              /*
+               * Cuándo toca renovar, si lo que se vendió es periódico.
+               *
+               * La periodicidad sale de la cotización que originó la línea:
+               * es quien sabe si eso se cobra al mes o una sola vez. Se suma
+               * con un interval de Postgres y no a mano, porque recorta bien
+               * el fin de mes —el 31 de enero más un mes es el 28 de febrero,
+               * no el 3 de marzo—, que es donde fallan estas cuentas.
+               */
+              cot.periodicidad,
+              CASE cot.periodicidad
+                WHEN 'mensual' THEN (current_date + interval '1 month')::date
+                WHEN 'anual' THEN (current_date + interval '1 year')::date
+                ELSE NULL
+              END
          FROM crm.oportunidad o
          JOIN crm.empresa emp ON emp.id = o.company_id
          LEFT JOIN LATERAL (
@@ -600,6 +615,14 @@ export class CrmService {
             ORDER BY pf.cerrada_en DESC NULLS LAST
             LIMIT 1
          ) p ON true
+         LEFT JOIN LATERAL (
+           SELECT c.periodicidad
+             FROM crm.proforma_linea l
+             JOIN crm.cotizacion c ON c.id = l.cotizacion
+            WHERE l.proforma = p.id
+            ORDER BY l.orden
+            LIMIT 1
+         ) cot ON true
         WHERE o.id = $1
        ON CONFLICT (oportunidad) DO UPDATE SET
          estado = 'pendiente_facturacion',
@@ -611,7 +634,9 @@ export class CrmService {
          razon_social = EXCLUDED.razon_social,
          direccion = EXCLUDED.direccion,
          marcada_por = EXCLUDED.marcada_por,
-         proforma = EXCLUDED.proforma
+         proforma = EXCLUDED.proforma,
+         periodicidad = EXCLUDED.periodicidad,
+         renueva_en = EXCLUDED.renueva_en
        WHERE crm.venta.anulada_en IS NOT NULL`,
       [oportunidad, usuario],
     );

@@ -388,3 +388,57 @@ reenviado contaría dos veces en las comisiones.
 
 Las fechas son las del aviso, no las de llegada: con `now()`, una venta de fin
 de mes registrada el día 1 cambia de periodo y con él de comisión.
+
+## Postventa: lo que pasa después de ganar
+
+Es donde se cae casi todo el mundo: se persigue al cliente durante semanas, se
+cierra la venta, y al día siguiente nadie vuelve a escribirle hasta que toca
+renovar, si alguien se acuerda. Las tres piezas que lo evitan son las que ya
+existían para vender, usadas al revés.
+
+**Secuencias que arrancan al ganar.** El motor es el mismo que el de
+prospección; lo único que faltaba era `aplica_a`, para que una secuencia de
+postventa pueda aplicarse a una venta cerrada —que es justo lo que el
+impedimento de prospección rechazaba—. Al revés también se comprueba: una
+secuencia de postventa sobre una venta sin cerrar es felicitar a alguien por
+algo que no ha comprado.
+
+**La encuesta es una sola pregunta de 0 a 10 con su enlace**, como la
+proforma. Los números van como botones grandes: una encuesta que cuesta tres
+toques se contesta la mitad de las veces, y la mitad que falta es siempre la de
+los clientes que no están contentos. El comentario es opcional pero se pide
+siempre, porque el número dice que algo va mal y el comentario dice qué. La
+respuesta queda además en el historial de la venta, que es donde la mira quien
+la lleva.
+
+**El NPS cuenta a los pasivos en el denominador.** Dejarlos fuera infla el
+número justo cuando hay muchos clientes tibios, que es cuando más importa
+saberlo. Sin respuestas devuelve «—» y no cero: un cero se lee como «vamos
+regular», y la verdad es que no se sabe.
+
+**No hay ningún proceso nocturno.** Las renovaciones que tocan se calculan al
+preguntar, igual que las tareas vencidas: un programador que corre de
+madrugada es una pieza que se cae en silencio y nadie lo nota hasta que pasan
+tres meses sin avisos. Lo que ya venció sigue en la lista y marcado: una
+renovación que pasó de fecha no desaparece del problema, se convierte en el
+problema.
+
+**Renovar abre una oportunidad, no da la venta por hecha.** Una renovación se
+negocia —el precio sube, el cliente pide otra cosa— y darla por cerrada haría
+que el embudo contara como ganado lo que falta trabajar.
+
+### El índice de oportunidad única sólo mira las abiertas
+
+Apareció al probar la primera renovación: el índice que impide dos
+oportunidades del mismo producto contaba también las ganadas, así que un
+cliente al que se le vendió contabilidad hace un año **no podía volver a
+comprarla**. Lo mismo con quien dijo que no en marzo y vuelve en octubre.
+
+La alternativa era archivar la oportunidad vieja al renovar, pero archivar es
+lo que se hace con lo que se abrió por error: una ganada archivada desaparece
+del embudo y del histórico, así que renovar habría borrado la venta del año
+pasado de los números.
+
+Los códigos de las etapas terminales van escritos dentro del índice, porque un
+índice parcial no puede consultar `crm.etapa`. Si se añade otra etapa
+terminal, hay que rehacerlo.

@@ -115,7 +115,7 @@ export class SeguimientoService {
     if (!op) throw new NotFoundException(`No existe la oportunidad ${oportunidad}`);
 
     const impedimento = impedimentoParaIniciar(
-      { activa: sec.activa, marca: sec.marca, producto: sec.producto },
+      { activa: sec.activa, marca: sec.marca, producto: sec.producto, aplica_a: sec.aplica_a },
       {
         marca: op.marca,
         producto: op.producto,
