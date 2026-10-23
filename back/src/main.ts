@@ -35,8 +35,12 @@ async function bootstrap() {
     exposedHeaders: ['Content-Range'],
   });
 
-  await app.listen(3001, '0.0.0.0', () => {
-    console.log('🚀 Backend corriendo en: http://localhost:3001');
+  // `PORT` ya estaba en el `.env` sin que nadie la leyera. Leerla permite
+  // levantar una segunda copia del API —otra rama, otro worktree— sin
+  // pelearse por el 3001.
+  const puerto = Number(process.env.PORT ?? 3001);
+  await app.listen(puerto, '0.0.0.0', () => {
+    console.log(`🚀 Backend corriendo en: http://localhost:${puerto}`);
   });
 }
 bootstrap();

@@ -37,7 +37,7 @@ const Header = () => {
             <div className="flex justify-between items-center flex-1">
               <Link
                 to="/"
-                className="flex items-center gap-2 text-secondary-foreground no-underline"
+                className="flex shrink-0 items-center gap-2 text-secondary-foreground no-underline"
               >
                 <img
                   className="[.light_&]:hidden h-6"
@@ -51,7 +51,11 @@ const Header = () => {
                 />
                 <h1 className="text-xl font-semibold">{title}</h1>
               </Link>
-              <div>
+              {/* Con las pestañas propias del CRM (Leads, WhatsApp, Agenda,
+                  Campañas) la fila ya no cabe en una pantalla de portátil, y
+                  sin esto la que se desplazaba en horizontal era la página
+                  entera. Así sólo se desplazan las pestañas. */}
+              <div className="min-w-0 overflow-x-auto [scrollbar-width:thin]">
                 <nav className="flex">
                   <NavigationTab
                     label={translate("ra.page.dashboard")}
@@ -82,6 +86,11 @@ const Header = () => {
                   {/* WhatsApp no es un recurso de react-admin —es una bandeja,
                       no una lista con ficha y formulario—, así que su entrada
                       va a mano en vez de salir del `<Resource>`. */}
+                  <NavigationTab
+                    label="Leads"
+                    to="/leads"
+                    isActive={currentPath === "/leads"}
+                  />
                   <NavigationTab
                     label="WhatsApp"
                     to="/whatsapp"
