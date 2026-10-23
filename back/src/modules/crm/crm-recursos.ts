@@ -215,6 +215,27 @@ export const RECURSOS: Record<string, Recurso> = {
   },
 
   /**
+   * El catálogo de productos, de sólo lectura.
+   *
+   * Es del gestor comercial —ahí se definen y se cuelgan de los segmentos— y
+   * el CRM sólo lo lee: para decir qué se le ofrece a una lista, y para colgar
+   * de ahí las plantillas de correo.
+   *
+   * Se expone por el API del CRM y no se consume el de segmentos porque la
+   * frontera entre los dos módulos pasa por aquí, y porque `/segmentos/catalogo`
+   * está roto desde antes de este trabajo (un `coalesce` sin cerrar).
+   */
+  productos: {
+    tabla: 'producto',
+    columnas: ['id', 'nombre', 'unidad', 'activo'],
+    escribibles: [],
+    soloLectura: true,
+    orden: 'nombre',
+    busqueda: ['nombre'],
+    select: `pr.codigo AS id, pr.nombre, pr.unidad, pr.activo`,
+  },
+
+  /**
    * El padrón, para buscar a quién enlazar.
    *
    * No es un recurso del CRM: es la ventana al gestor comercial desde la que
@@ -319,6 +340,7 @@ export const ALIAS: Record<string, string> = {
   deals: 'o',
   sales: 's',
   padron: 'p',
+  productos: 'pr',
 };
 
 /**

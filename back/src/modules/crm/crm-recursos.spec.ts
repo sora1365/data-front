@@ -23,6 +23,7 @@ const RECURSOS_DEL_CRM = [
   // No es un recurso de Atomic: es la ventana al padrón de FRIDAY desde la que
   // se crea una empresa sin teclear sus datos.
   'padron',
+  'productos',
 ];
 
 describe('recursos del CRM', () => {
@@ -105,10 +106,24 @@ describe('definición de cada recurso', () => {
     expect(RECURSOS.companies.escribibles).toContain('clave');
   });
 
-  it('todas las tablas del CRM viven en su esquema', () => {
+  /**
+   * Lo que es del CRM vive en su esquema; lo que se lee del gestor comercial,
+   * no. Esa lista de excepciones es la frontera entre los dos módulos: si
+   * crece, es que el CRM está leyendo cosas del otro lado que quizá debería
+   * pedirle por su API en vez de consultar directamente.
+   */
+  const DEL_GESTOR_COMERCIAL = ['padron', 'productos'];
+
+  it('todas las tablas propias del CRM viven en su esquema', () => {
     for (const [recurso, def] of entradas) {
-      if (recurso === 'padron') continue; // el perfil es del gestor comercial
+      if (DEL_GESTOR_COMERCIAL.includes(recurso)) continue;
       expect(def.tabla.startsWith('crm.')).toBe(true);
+    }
+  });
+
+  it('lo que se lee del gestor comercial es de sólo lectura', () => {
+    for (const recurso of DEL_GESTOR_COMERCIAL) {
+      expect(RECURSOS[recurso].soloLectura).toBe(true);
     }
   });
 });

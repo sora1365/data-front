@@ -95,3 +95,79 @@ export const listarSegmentos = async (): Promise<
   const segmentos = await respuesta.json();
   return segmentos.filter((s: any) => s.activo);
 };
+
+export interface PlantillaCorreo {
+  id: string;
+  nombre: string;
+  asunto: string;
+  cuerpo: string;
+  producto: string | null;
+  producto_nombre: string | null;
+  marca: string | null;
+  remitente: string | null;
+}
+
+export interface Adjunto {
+  id: string;
+  nombre: string;
+  tipo: string | null;
+  tamano: string;
+  subido_por: string;
+}
+
+/** Las plantillas, normalmente las del producto que se va a ofrecer. */
+export const listarPlantillas = (producto?: string): Promise<PlantillaCorreo[]> =>
+  pedir(`/plantillas${producto ? `?producto=${encodeURIComponent(producto)}` : ""}`);
+
+export const crearPlantilla = (datos: Record<string, unknown>): Promise<PlantillaCorreo> =>
+  pedir("/plantillas", { method: "POST", body: JSON.stringify(datos) });
+
+export const listarAdjuntos = (campania: string): Promise<Adjunto[]> =>
+  pedir(`/${campania}/adjuntos`);
+
+export const quitarAdjunto = (campania: string, id: string): Promise<Adjunto[]> =>
+  pedir(`/${campania}/adjuntos/${id}`, { method: "DELETE" });
+
+/**
+ * Sube un archivo a la campaña.
+ *
+ * No pasa por `pedir` porque va como `multipart/form-data` y el navegador
+ * tiene que poner él la cabecera con su `boundary`: fijarla a mano rompe la
+ * subida con un error que no menciona el tipo de contenido.
+ */
+export async function subirAdjunto(campania: string, archivo: File): Promise<Adjunto[]> {
+  const cuerpo = new FormData();
+  cuerpo.append("file", archivo);
+
+  const respuesta = await fetch(`${BASE}/${campania}/adjuntos`, {
+    method: "POST",
+    headers: { "X-Usuario": usuarioActual() },
+    body: cuerpo,
+  });
+
+  if (!respuesta.ok) {
+    let mensaje = `${respuesta.status} ${respuesta.statusText}`;
+    try {
+      const datos = await respuesta.json();
+      if (datos?.message) mensaje = datos.message;
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+    throw new Error(mensaje);
+  }
+
+  return respuesta.json();
+}
+
+/**
+ * Los productos del catálogo, para elegir qué se ofrece.
+ *
+ * Se piden al API del CRM y no al de segmentos: la frontera entre los dos
+ * módulos pasa por el servicio del CRM, y así hay un solo sitio que cambiar.
+ */
+export const listarProductos = async (): Promise<{ codigo: string; nombre: string }[]> => {
+  const respuesta = await fetch(`${API}/crm/api/productos?range=%5B0,200%5D`);
+  if (!respuesta.ok) return [];
+  const filas = await respuesta.json();
+  return filas.map((p: any) => ({ codigo: p.id, nombre: p.nombre }));
+};

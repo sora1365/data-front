@@ -13,8 +13,15 @@ import {
   listarSegmentos,
   obtenerCampania,
   prepararCampania,
+  listarAdjuntos,
+  listarPlantillas,
+  listarProductos,
+  quitarAdjunto,
+  subirAdjunto,
+  type Adjunto,
   type Campania,
   type Destinatario,
+  type PlantillaCorreo,
 } from "../providers/friday/campanias";
 
 /**
@@ -241,6 +248,8 @@ const Detalle = ({
         </div>
       )}
 
+      <Adjuntos campania={campania} />
+
       {campania.estado === "borrador" && (
         <div className="flex flex-col gap-2 border rounded p-3">
           <p className="text-sm">
@@ -313,6 +322,97 @@ const Detalle = ({
   );
 };
 
+/**
+ * Los documentos que acompañan a la campaña.
+ *
+ * Sólo se pueden tocar mientras no se haya enviado: añadir uno después dejaría
+ * la ficha diciendo que llevaba un documento que nadie recibió. Por eso con la
+ * campaña enviada se listan pero no se editan.
+ */
+const Adjuntos = ({ campania }: { campania: Campania }) => {
+  const [adjuntos, setAdjuntos] = useState<Adjunto[]>([]);
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const editable = campania.estado === "borrador" || campania.estado === "preparada";
+
+  useEffect(() => {
+    listarAdjuntos(campania.id).then(setAdjuntos).catch(() => setAdjuntos([]));
+  }, [campania.id]);
+
+  const subir = async (archivo: File) => {
+    setSubiendo(true);
+    setError(null);
+    try {
+      setAdjuntos(await subirAdjunto(campania.id, archivo));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  if (!editable && adjuntos.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-2 border rounded p-3">
+      <p className="text-sm font-medium">Documentos adjuntos</p>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {adjuntos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Ninguno.</p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {adjuntos.map((a) => (
+            <li key={a.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate">
+                {a.nombre}{" "}
+                <span className="text-muted-foreground text-xs">
+                  ({Math.max(Math.round(Number(a.tamano) / 1024), 1)} KB)
+                </span>
+              </span>
+              {editable && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => setAdjuntos(await quitarAdjunto(campania.id, a.id))}
+                >
+                  Quitar
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {editable && (
+        <div className="flex flex-col gap-1">
+          <input
+            type="file"
+            className="text-sm"
+            accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg"
+            disabled={subiendo}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0];
+              if (archivo) subir(archivo);
+              e.target.value = "";
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Documentos e imágenes hasta 10 MB. Van en todos los correos de la
+            campaña.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Cifra = ({
   valor,
   etiqueta,
@@ -338,6 +438,10 @@ const NuevaCampania = ({
   const [segmentos, setSegmentos] = useState<
     { codigo: string; nombre: string; miembros: number }[]
   >([]);
+  const [productos, setProductos] = useState<{ codigo: string; nombre: string }[]>([]);
+  const [plantillas, setPlantillas] = useState<PlantillaCorreo[]>([]);
+  const [producto, setProducto] = useState("");
+  const [plantilla, setPlantilla] = useState("");
   const [datos, setDatos] = useState({
     nombre: "",
     segmento: "",
@@ -351,7 +455,39 @@ const NuevaCampania = ({
 
   useEffect(() => {
     listarSegmentos().then(setSegmentos).catch(() => {});
+    listarProductos().then(setProductos).catch(() => {});
   }, []);
+
+  /**
+   * Al elegir producto se cargan sus plantillas y se olvida la anterior.
+   *
+   * Conservarla al cambiar de producto dejaría mandar el correo de
+   * contabilidad a una lista de auditoría sin que nada avisara.
+   */
+  useEffect(() => {
+    setPlantilla("");
+    if (!producto) {
+      setPlantillas([]);
+      return;
+    }
+    listarPlantillas(producto).then(setPlantillas).catch(() => setPlantillas([]));
+  }, [producto]);
+
+  const usarPlantilla = (id: string) => {
+    setPlantilla(id);
+    const elegida = plantillas.find((p) => String(p.id) === id);
+    if (!elegida) return;
+    // Se rellenan los campos para que se vea qué se va a mandar antes de
+    // crearla. El servidor copia igualmente desde la plantilla; esto es para
+    // que nadie envíe a ciegas.
+    setDatos((d) => ({
+      ...d,
+      nombre: d.nombre || elegida.nombre,
+      asunto: elegida.asunto,
+      cuerpo: elegida.cuerpo,
+      remitente: elegida.remitente ?? d.remitente,
+    }));
+  };
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -361,6 +497,8 @@ const NuevaCampania = ({
       await alCrear({
         nombre: datos.nombre || datos.asunto,
         segmento: datos.segmento || undefined,
+        producto: producto || undefined,
+        plantilla: plantilla ? Number(plantilla) : undefined,
         asunto: datos.asunto,
         cuerpo: datos.cuerpo,
         remitente: datos.remitente || undefined,
@@ -417,6 +555,47 @@ const NuevaCampania = ({
             menos que los miembros del segmento.
           </p>
         </div>
+
+        <div className="flex flex-col gap-1">
+          <Label>Producto que se ofrece</Label>
+          <select
+            className="border rounded px-2 py-1 text-sm bg-background"
+            value={producto}
+            onChange={(e) => setProducto(e.target.value)}
+          >
+            <option value="">Ninguno</option>
+            {productos.map((p) => (
+              <option key={p.codigo} value={p.codigo}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {producto && (
+          <div className="flex flex-col gap-1">
+            <Label>Plantilla</Label>
+            {plantillas.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Este producto no tiene plantillas todavía. Escribe el mensaje
+                abajo y quedará guardado en la campaña.
+              </p>
+            ) : (
+              <select
+                className="border rounded px-2 py-1 text-sm bg-background"
+                value={plantilla}
+                onChange={(e) => usarPlantilla(e.target.value)}
+              >
+                <option value="">Escribir desde cero</option>
+                {plantillas.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <Label>Asunto</Label>
