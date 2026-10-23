@@ -270,3 +270,41 @@ registraba ninguna.
 Una venta ya facturada o cobrada no llega hasta aquí: el movimiento se rechaza
 antes, porque existe un documento con efectos tributarios y deshacerlo es una
 nota de crédito en el contable, no un arrastre de tarjeta.
+
+## Proformas: la oferta por escrito y su aceptación
+
+Hasta aquí una oportunidad tenía un importe suelto —un número en una tarjeta—
+y lo que el cliente recibía era un correo escrito a mano. La proforma es el
+documento: qué se le ofrece, por cuánto, hasta cuándo vale y quién dijo que sí.
+
+**La lista de precios vive en el CRM**, no en `producto`. El catálogo es del
+gestor comercial; añadirle una columna `precio` sería el CRM escribiendo en una
+tabla de otro módulo. El precio se copia a la línea al cotizar, así que si
+mañana sube la lista, lo ofrecido ayer sigue valiendo lo que decía.
+
+**El IVA va por producto y no en una configuración global**: en Ecuador
+conviven el 15 % y los servicios con tarifa cero, y un único porcentaje obliga
+a corregir a mano cada proforma del otro tipo.
+
+**Se redondea por línea y después se suma.** Sumando los valores largos y
+redondeando al final, el total no cuadra con la suma de lo que el cliente ve
+impreso, y esa diferencia de un céntimo es la que hace que llame.
+
+**Una enviada no se edita.** El cliente tiene en la mano un documento con ese
+número; cambiarle los precios por detrás es perder la discusión sobre lo que
+se acordó. Para cambiarla se hace otra.
+
+**El vencimiento no es un estado guardado** sino una comparación con hoy. Un
+estado `vencida` en la tabla necesitaría un proceso nocturno que lo escribiera,
+y mientras no pasara, la proforma diría que sigue viva. El último día cuenta:
+una oferta «válida hasta el 30» que caduca el 30 por la mañana es una trampa.
+
+**Aceptar gana la oportunidad**, con todo lo que arrastra: entrega la venta al
+contable, corta el seguimiento y marca al sujeto como cliente. Es el sentido de
+tener aceptación en línea; si el «sí» del cliente no moviera nada habría que
+volver a teclearlo, y la mitad de las veces no se haría. Si el movimiento
+fallara, la aceptación ya está guardada: es lo que no se puede perder.
+
+El enlace del cliente va por un uuid y no por el id. Con el id, cualquiera que
+reciba una proforma lee las demás cambiando un número en la barra de
+direcciones, y ahí van el RUC y los precios de otros clientes.

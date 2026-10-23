@@ -27,6 +27,7 @@ import { useConfigurationContext } from "../root/ConfigurationContext";
 import type { Deal } from "../types";
 import { ContactList } from "./ContactList";
 import { Historial } from "./Historial";
+import { Proformas } from "./Proformas";
 import { Seguimiento } from "./Seguimiento";
 import { findDealLabel, formatISODateString } from "./dealUtils";
 
@@ -191,6 +192,11 @@ const DealShowContent = () => {
           <div className="m-4">
             <Separator className="mb-4" />
             <Seguimiento dealId={record.id} />
+          </div>
+
+          <div className="m-4">
+            <Separator className="mb-4" />
+            <Proformas dealId={record.id} />
           </div>
 
           <div className="m-4">

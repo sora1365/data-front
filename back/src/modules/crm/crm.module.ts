@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { SegmentosModule } from '../segmentos/segmentos.module';
+import { CampaniasModule } from './campanias/campanias.module';
+import { ProformasController } from './proformas/proformas.controller';
+import { ProformasService } from './proformas/proformas.service';
 import { CrmController } from './crm.controller';
 import { CrmRestController } from './crm-rest.controller';
 import { CrmRestService } from './crm-rest.service';
@@ -17,8 +20,8 @@ import { ComisionesService } from './tableros/comisiones.service';
  * acaban difiriendo la lista de trabajo y el CRM.
  */
 @Module({
-  imports: [SegmentosModule],
-  controllers: [CrmController, CrmRestController, TablerosController, SeguimientoController],
+  imports: [SegmentosModule, CampaniasModule],
+  controllers: [CrmController, CrmRestController, TablerosController, SeguimientoController, ProformasController],
   providers: [
     CrmService,
     CrmRestService,
@@ -26,6 +29,7 @@ import { ComisionesService } from './tableros/comisiones.service';
     TablerosService,
     ComisionesService,
     SeguimientoService,
+    ProformasService,
   ],
   exports: [CrmService],
 })

@@ -39,6 +39,6 @@ import {
       },
     },
   ],
-  exports: [CampaniasService],
+  exports: [CampaniasService, CorreoConector],
 })
 export class CampaniasModule {}
