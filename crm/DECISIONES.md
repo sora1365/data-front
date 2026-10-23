@@ -252,3 +252,21 @@ Otras tres decisiones:
 
 Sin meta cargada, el umbral no bloquea el pago: no se le deja de pagar a
 alguien por un dato que la empresa no puso.
+
+### Deshacer un «ganada» retira la venta
+
+Ganar entrega la venta al módulo contable; sacar la tarjeta de «ganada» la
+**anula**. Sin esto, deshacer un «ganada» puesto por error dejaba viva una
+venta que el contable tenía pendiente de facturar y que el cuadro de
+comisiones seguía contando como dinero en camino: una venta fantasma de un
+trato que ya no existe.
+
+Se anula y no se borra: la entrega ocurrió, y borrar la fila haría desaparecer
+de los dos lados algo que alguien pudo empezar a tramitar. Volver a ganarla
+revive esa misma fila con los datos de hoy en vez de crear otra, porque la
+venta es única por oportunidad y con `DO NOTHING` la segunda vez no se
+registraba ninguna.
+
+Una venta ya facturada o cobrada no llega hasta aquí: el movimiento se rechaza
+antes, porque existe un documento con efectos tributarios y deshacerlo es una
+nota de crédito en el contable, no un arrastre de tarjeta.

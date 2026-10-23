@@ -9,6 +9,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { SegmentosService } from '../segmentos/segmentos.service';
 import {
+  accionSobreLaVenta,
   CANALES,
   EstadoVenta,
   estadoAlAbrir,
@@ -413,8 +414,13 @@ export class CrmService {
       await this.segmentos.marcarEstado(actual.tipo_sujeto, actual.clave, nuevoEstado);
     }
 
-    // Ganar es lo que entrega la venta al módulo contable.
-    if (destino.es_ganada) await this.registrarVenta(id, usuario);
+    // Ganar es lo que entrega la venta al módulo contable, y deshacerlo la
+    // retira: una venta viva colgando de un trato que ya no está ganado es
+    // dinero que el contable tiene pendiente de facturar y que el cuadro de
+    // comisiones sigue contando como comisión en camino.
+    const accion = accionSobreLaVenta(venta?.estado ?? null, destino.es_ganada);
+    if (accion === 'registrar') await this.registrarVenta(id, usuario);
+    if (accion === 'anular') await this.anularVenta(id, usuario, actual.etapa);
 
     await this.registrarInteraccionDeEtapa(id, actual.etapa, etapa, usuario);
 
@@ -537,8 +543,39 @@ export class CrmService {
          FROM crm.oportunidad o
          JOIN crm.empresa emp ON emp.id = o.company_id
         WHERE o.id = $1
-       ON CONFLICT (oportunidad) DO NOTHING`,
+       ON CONFLICT (oportunidad) DO UPDATE SET
+         estado = 'pendiente_facturacion',
+         anulada_en = NULL,
+         ganada_en = now(),
+         monto = EXCLUDED.monto,
+         comercial = EXCLUDED.comercial,
+         ruc = EXCLUDED.ruc,
+         razon_social = EXCLUDED.razon_social,
+         direccion = EXCLUDED.direccion,
+         marcada_por = EXCLUDED.marcada_por
+       WHERE crm.venta.anulada_en IS NOT NULL`,
       [oportunidad, usuario],
+    );
+  }
+
+  /**
+   * Retira del contable una venta que se deshizo.
+   *
+   * Se anula, no se borra: la entrega ocurrió, y borrar la fila haría
+   * desaparecer de los dos lados algo que alguien pudo empezar a tramitar.
+   * Anulada se ve, y se ve que se deshizo y desde qué etapa.
+   *
+   * Sólo toca lo pendiente de facturar; una facturada o cobrada ni siquiera
+   * llega hasta aquí, porque el movimiento se rechaza antes.
+   */
+  private async anularVenta(oportunidad: number, usuario: string, etapaAnterior: string) {
+    await this.dataSource.query(
+      `UPDATE crm.venta
+          SET estado = 'anulada', anulada_en = now(), marcada_por = $2,
+              nota = coalesce(nota || ' · ', '') ||
+                     'Anulada al sacar la oportunidad de «' || $3 || '»'
+        WHERE oportunidad = $1 AND estado = 'pendiente_facturacion'`,
+      [oportunidad, usuario, etapaAnterior],
     );
   }
 
