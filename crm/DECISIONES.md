@@ -442,3 +442,42 @@ pasado de los números.
 Los códigos de las etapas terminales van escritos dentro del índice, porque un
 índice parcial no puede consultar `crm.etapa`. Si se añade otra etapa
 terminal, hay que rehacerlo.
+
+## Listas de trabajo: la memoria del intento
+
+El gestor comercial sabe a quién llamar —convierte 7,1 millones de sujetos en
+segmentos— y el CRM sabe qué pasó después de la llamada. Faltaba lo de en
+medio: **que la lista recuerde**. Sin eso sale igual todos los días, y todos
+los días se llama a los veinte primeros mientras el final del segmento no se
+toca nunca.
+
+Los miembros los da `SegmentosService`, no una consulta copiada: el día que
+cambien las condiciones de un segmento, la lista de trabajo tiene que cambiar
+con él. El CRM sólo les añade lo que sabe —si ya se llamó, cuándo toca volver,
+si ya hay oportunidad abierta—.
+
+**Una gestión no es una interacción.** `crm.interaccion` cuelga de una
+oportunidad o de un contacto, y aquí el caso normal es el contrario: llamé a
+una empresa que todavía no es nada en el CRM y no contestó. Crear una
+oportunidad para poder anotarlo llenaría el tablero de tarjetas que nadie
+abrió, y el embudo diría que se trabajaron ventas que no existieron.
+
+**Cuándo vuelve cada uno:** quien no contesta, en dos días, y cada intento
+seguido aleja el siguiente hasta un tope de treinta —llamar siete veces en una
+semana no consigue nada que no consiga llamar tres veces en un mes, y quema el
+contacto—; a quien no le interesa se le pregunta en seis meses; quien pide que
+no lo llamen no vuelve nunca.
+
+**«No le interesa» no es «no me llames».** Son dos cosas distintas y
+confundirlas borra del mercado a medio segmento por una conversación de
+treinta segundos. Sólo lo segundo se devuelve al gestor como `no_contactar`.
+
+La devolución va por `marcarEstado`, el mismo método que usa el resto del CRM,
+porque el estado comercial de un sujeto es uno solo. Y si el gestor no la
+acepta, la gestión ya quedó guardada: lo que no se puede perder es lo que
+acaba de anotar quien colgó el teléfono.
+
+El orden pone primero **a quien nunca se ha llamado**, que es lo contrario de
+lo que pasa solo. Y el rendimiento por segmento contesta la pregunta que
+justifica tener segmentos: de lo que se llamó, cuánto acabó en oportunidad. Es
+el embudo de antes del embudo.

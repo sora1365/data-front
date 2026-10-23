@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { SegmentosModule } from '../segmentos/segmentos.module';
 import { CampaniasModule } from './campanias/campanias.module';
 import { ContableController, InventarioController } from './contable/contable.controller';
+import { ListasController } from './listas/listas.controller';
+import { ListasService } from './listas/listas.service';
 import { PostventaController } from './postventa/postventa.controller';
 import { PostventaService } from './postventa/postventa.service';
 import { ContableService } from './contable/contable.service';
@@ -28,7 +30,8 @@ import { ComisionesService } from './tableros/comisiones.service';
 @Module({
   imports: [SegmentosModule, CampaniasModule],
   controllers: [CrmController, CrmRestController, TablerosController, SeguimientoController, ProformasController, CotizadoresController,
-    ContableController, InventarioController, PostventaController],
+    ContableController, InventarioController, PostventaController,
+    ListasController],
   providers: [
     CrmService,
     CrmRestService,
@@ -40,6 +43,7 @@ import { ComisionesService } from './tableros/comisiones.service';
     CotizadoresService,
     ContableService,
     PostventaService,
+    ListasService,
   ],
   exports: [CrmService],
 })
