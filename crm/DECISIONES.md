@@ -154,3 +154,34 @@ día y el servidor sólo lo usa de respaldo. Por lo mismo, `due_date` viaja como
 texto `YYYY-MM-DD`: es una columna `date`, y serializada como instante una
 tarea que vence el lunes aparece el domingo en cuanto el navegador está al este
 de Greenwich.
+
+## Tableros: el embudo se mide por el recorrido, no por la foto
+
+El tablero de tarjetas dice en qué etapa está cada venta **hoy**, y con eso no
+se contesta la pregunta que justifica un embudo: de cien oportunidades
+abiertas, cuántas llegaron a propuesta. Una ganada ya no aparece en
+«propuesta» aunque pasara por ahí, así que contar por etapa actual mide el
+momento y no el recorrido.
+
+Por eso `crm.oportunidad_etapa`: cada movimiento, como datos. El movimiento ya
+se anotaba en `crm.interaccion` —«De «contacto» a «propuesta»»— pero como
+frase: servía para leerla, no para contarla, y bastaba con cambiar las
+comillas para que el embudo empezara a mentir sin que nada fallara. Se
+mantienen las dos cosas: el historial que se lee en la ficha es uno solo.
+
+Tres decisiones que hacen que los números signifiquen algo:
+
+- **Llegar a una etapa es haber estado en ella o más allá.** Quien salta de
+  «por contactar» a «negociación» pasó por propuesta; contándolo sólo donde se
+  registró, el embudo enseñaría un agujero que no existe.
+- **El embudo mide las oportunidades abiertas en el periodo, a lo largo de toda
+  su vida**, no los movimientos del periodo. Contar movimientos mezcla
+  recorridos: una venta de hace un año que se cierra hoy sumaría en la
+  «propuesta» de este mes sin haber entrado por arriba, y la conversión saldría
+  por encima del 100 %.
+- **La tasa de cierre se mide sobre lo cerrado**, no sobre todo lo abierto. Con
+  el otro denominador, el porcentaje sube solo al cerrar cosas viejas y baja
+  cada vez que alguien abre una oportunidad nueva.
+
+Las archivadas quedan fuera: se archiva lo abierto por error o por duplicado, y
+contarlo hundiría la conversión con ventas que nunca existieron.

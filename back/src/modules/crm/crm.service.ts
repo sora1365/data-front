@@ -302,6 +302,15 @@ export class CrmService {
       throw e;
     }
 
+    // El primer asiento del recorrido: en qué etapa nació. Sin él, una
+    // oportunidad que nunca se movió no aparecería en el embudo, y el primer
+    // tramo de las que sí se movieron mediría desde la nada.
+    await this.dataSource.query(
+      `INSERT INTO crm.oportunidad_etapa (oportunidad, desde, hasta, autor, ocurrido_en)
+       VALUES ($1, NULL, $2, $3, now())`,
+      [creada.id, etapa, usuario],
+    );
+
     const nuevoEstado = estadoAlAbrir(estado?.estado ?? null);
     if (nuevoEstado) {
       await this.segmentos.marcarEstado(datos.tipoSujeto, datos.clave, nuevoEstado);
@@ -767,6 +776,16 @@ export class CrmService {
       `INSERT INTO crm.interaccion (canal, direccion, oportunidad, resultado, texto, autor)
        VALUES ('sistema', 'saliente', $1, 'cambio_etapa', $2, $3)`,
       [oportunidad, `De «${desde}» a «${hasta}»`, usuario],
+    );
+
+    // Y el mismo movimiento como datos, que es de donde sale el embudo. La
+    // frase de arriba es para leerla en la ficha; contar sobre ella obligaría
+    // a descomponer texto, y cambiar esas comillas rompería la medición sin
+    // que nada fallara.
+    await this.dataSource.query(
+      `INSERT INTO crm.oportunidad_etapa (oportunidad, desde, hasta, autor)
+       VALUES ($1, $2, $3, $4)`,
+      [oportunidad, desde, hasta, usuario],
     );
   }
 }

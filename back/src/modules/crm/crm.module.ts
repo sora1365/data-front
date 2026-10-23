@@ -5,6 +5,8 @@ import { CrmRestController } from './crm-rest.controller';
 import { CrmRestService } from './crm-rest.service';
 import { CrmCoincidenciasService } from './crm-coincidencias.service';
 import { CrmService } from './crm.service';
+import { TablerosController } from './tableros/tableros.controller';
+import { TablerosService } from './tableros/tableros.service';
 
 /**
  * Importa `SegmentosModule` para reutilizar `marcarEstado`: el estado comercial
@@ -13,8 +15,8 @@ import { CrmService } from './crm.service';
  */
 @Module({
   imports: [SegmentosModule],
-  controllers: [CrmController, CrmRestController],
-  providers: [CrmService, CrmRestService, CrmCoincidenciasService],
+  controllers: [CrmController, CrmRestController, TablerosController],
+  providers: [CrmService, CrmRestService, CrmCoincidenciasService, TablerosService],
   exports: [CrmService],
 })
 export class CrmModule {}
