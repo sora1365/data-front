@@ -266,8 +266,20 @@ export const RECURSOS: Record<string, Recurso> = {
     `,
   },
 
+  /**
+   * Las tareas. `due_date` sale como texto `YYYY-MM-DD` por lo mismo que la
+   * fecha de cierre de una oportunidad: es una columna `date`, un día sin
+   * hora, y serializada como instante UTC una tarea que vence el lunes
+   * aparece el domingo en cuanto el navegador está al este de Greenwich.
+   * `done_date` sí es un instante —importa a qué hora se dio por hecha— y va
+   * tal cual.
+   */
   tasks: {
     tabla: 'crm.tarea',
+    select: `
+      t.id, t.text, t.type, to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
+      t.done_date, t.contact_id, t.deal_id, t.sales_id, t.created_at
+    `,
     columnas: [
       'id',
       'text',

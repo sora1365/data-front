@@ -1,7 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { conflictos, franjaValida, huecosLibres } from './agenda.reglas';
+import {
+  conflictos,
+  diaLocal,
+  diasDeLaSemana,
+  franjaValida,
+  huecosLibres,
+  repartirTareasPorDia,
+} from './agenda.reglas';
 
 export interface DatosEvento {
   calendario: number;
@@ -15,6 +22,8 @@ export interface DatosEvento {
   empresaId?: number | null;
   contactoId?: number | null;
   oportunidadId?: number | null;
+  /** La tarea a la que sirve esta cita, si se reservó la hora para una. */
+  tareaId?: number | null;
   participantes?: string[];
 }
 
@@ -165,8 +174,8 @@ export class AgendaService {
     const res = await this.dataSource.query(
       `INSERT INTO crm.evento
          (calendario, titulo, descripcion, lugar, inicio, fin, todo_el_dia, importante,
-          empresa_id, contacto_id, oportunidad_id, creado_por)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+          empresa_id, contacto_id, oportunidad_id, tarea_id, creado_por)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING id`,
       [
         datos.calendario,
@@ -180,6 +189,7 @@ export class AgendaService {
         datos.empresaId ?? null,
         datos.contactoId ?? null,
         datos.oportunidadId ?? null,
+        datos.tareaId ?? null,
         usuario,
       ],
     );
@@ -336,6 +346,71 @@ export class AgendaService {
       if (choques.length) avisos.push({ usuario, conflictos: choques });
     }
     return avisos;
+  }
+
+  // ------------------------------------------------------------------ tareas
+
+  /**
+   * Las tareas que se pintan en una semana de la agenda.
+   *
+   * Son las de quien mira, no las del equipo: la franja de tareas contesta
+   * «qué tengo que hacer esta semana», y con las de todos deja de contestar
+   * nada. Para ver las de otra persona está el tablero.
+   *
+   * La consulta pide un día más por cada lado de lo pendiente vencido, y el
+   * reparto a hoy lo decide `repartirTareasPorDia`. `due_date` sale como texto
+   * `YYYY-MM-DD` porque es una columna `date`: convertida a `Date` se
+   * serializa como un instante UTC, y una tarea que vence el lunes aparecería
+   * el domingo en media Europa.
+   */
+  async tareas(usuario: string, lunes: string, hoyDelCliente?: string) {
+    const dias = diasDeLaSemana(lunes);
+    // Cuál es «hoy» lo decide el reloj de quien mira, que puede no estar en la
+    // misma zona que el servidor; el del servidor es sólo el respaldo.
+    const hoy = hoyDelCliente ?? diaLocal();
+
+    const filas = await this.dataSource.query(
+      `SELECT t.id, to_char(t.due_date, 'YYYY-MM-DD') AS vence,
+              t.done_date IS NOT NULL AS hecha,
+              t.text AS texto, t.type AS tipo, t.done_date AS hecha_en,
+              t.deal_id, t.contact_id,
+              o.name AS oportunidad, emp.name AS empresa,
+              c.first_name AS contacto_nombre, c.last_name AS contacto_apellido,
+              (SELECT count(*)::int FROM crm.evento e WHERE e.tarea_id = t.id) AS citas
+         FROM crm.tarea t
+         LEFT JOIN crm.oportunidad o ON o.id = t.deal_id
+         LEFT JOIN crm.contacto c ON c.id = t.contact_id
+         LEFT JOIN crm.empresa emp ON emp.id = coalesce(o.company_id, c.company_id)
+        WHERE t.sales_id = $1
+          AND (t.due_date BETWEEN $2::date AND $3::date
+               OR (t.done_date IS NULL AND t.due_date < $4::date))
+        ORDER BY t.due_date, t.id`,
+      [usuario, dias[0], dias[6], hoy],
+    );
+
+    const porDia = repartirTareasPorDia(filas, dias, hoy);
+    return dias.map((dia) => ({ dia, tareas: porDia.get(dia) ?? [] }));
+  }
+
+  /**
+   * Dar una tarea por hecha, o deshacerlo.
+   *
+   * Se puede deshacer porque marcar la de al lado por error es la equivocación
+   * más fácil de cometer en una lista con casillas, y sin vuelta atrás la
+   * tarea desaparece de la vista: nadie la recupera porque nadie sabe que se
+   * fue.
+   */
+  async marcarTarea(id: number, hecha: boolean, usuario: string) {
+    const filas = await this.dataSource.query(
+      `UPDATE crm.tarea SET done_date = CASE WHEN $2 THEN now() ELSE NULL END
+        WHERE id = $1 AND sales_id = $3
+       RETURNING id, to_char(due_date, 'YYYY-MM-DD') AS vence, done_date`,
+      [id, hecha, usuario],
+    );
+    if (!filas[0]) {
+      throw new NotFoundException(`No existe la tarea ${id} o no es tuya.`);
+    }
+    return filas[0];
   }
 
   /**

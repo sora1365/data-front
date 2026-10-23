@@ -128,3 +128,29 @@ que cualquiera lo cambie.
 Los eventos pueden colgar de una empresa, un contacto o una oportunidad, y
 guardan el **resultado** de la reunión: sin un sitio donde ponerlo acaba en una
 nota suelta que nadie relaciona con la cita.
+
+### Las tareas no son eventos, pero se ven en la agenda
+
+Una tarea vence un día y no a una hora; un evento ocupa una franja. Meterlas en
+la misma tabla obligaría a inventarle una hora a cada tarea, y aparecería a las
+siete de la mañana tapando una cita de verdad. Van en la franja de arriba, que
+es donde TimeTree pone lo de todo el día.
+
+El puente va en un solo sentido: **el evento dice a qué tarea sirve**
+(`crm.evento.tarea_id`). Reservar un rato para algo pendiente es el caso real,
+y así la tarea sigue siendo la dueña de su vencimiento mientras la cita es sólo
+cuándo se va a hacer. Una columna `evento` en la tarea sería falsa: nada impide
+reservar dos ratos, y guardar el último haría desaparecer el primero.
+
+**Lo pendiente que ya venció se arrastra a hoy**, en rojo y con los días de
+retraso. Dejarlo en su día es exactamente cómo se pierde una tarea: la semana
+siguiente nadie vuelve a mirar el jueves anterior. Lo ya hecho se queda donde
+vencía, porque es el registro de lo que se hizo ese día.
+
+**Cuál es «hoy» lo decide el reloj de quien mira.** `toISOString().slice(0, 10)`
+da el día en UTC, y a las siete de la tarde en Ecuador ya es el día siguiente:
+con eso, cada tarde lo de mañana se pintaría como vencido. La pantalla manda su
+día y el servidor sólo lo usa de respaldo. Por lo mismo, `due_date` viaja como
+texto `YYYY-MM-DD`: es una columna `date`, y serializada como instante una
+tarea que vence el lunes aparece el domingo en cuanto el navegador está al este
+de Greenwich.

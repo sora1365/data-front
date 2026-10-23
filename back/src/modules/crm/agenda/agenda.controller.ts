@@ -109,6 +109,39 @@ export class AgendaController {
     return this.agenda.responder(id, body.estado, usuario);
   }
 
+  /**
+   * Las tareas de la semana que se está mirando.
+   *
+   * `lunes` llega como `YYYY-MM-DD` y no como un instante: la semana que se
+   * mira es la del reloj de quien mira, y un `toISOString()` del lunes a las
+   * 00:00 en Ecuador es el domingo a las 05:00 en UTC, que empieza la semana
+   * un día antes.
+   */
+  @Get('tareas')
+  tareas(
+    @Query('lunes') lunes: string,
+    @Query('hoy') hoy: string,
+    @Usuario() usuario: string,
+  ) {
+    const esDia = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '');
+    if (!esDia(lunes)) {
+      throw new BadRequestException('Falta el lunes de la semana, como 2026-10-19.');
+    }
+    // `hoy` lo manda el cliente porque sabe en qué día está su reloj; si no
+    // llega, se usa el del servidor.
+    return this.agenda.tareas(usuario, lunes, esDia(hoy) ? hoy : undefined);
+  }
+
+  @Post('tareas/:id/hecha')
+  @HttpCode(200)
+  marcarTarea(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { hecha?: boolean },
+    @Usuario() usuario: string,
+  ) {
+    return this.agenda.marcarTarea(id, body?.hecha ?? true, usuario);
+  }
+
   /** Cuándo pueden atender estas personas. */
   @Get('disponibilidad')
   disponibilidad(
