@@ -500,3 +500,18 @@ revés. La pantalla dice de qué ámbito es el guion que está enseñando.
 
 Una objeción sin respuesta no se guarda: media objeción en la pantalla de
 quien está llamando es peor que ninguna, porque la lee y se queda a medias.
+
+## Dos worktrees comparten la caché de Vite
+
+Si se trabaja el CRM desde dos copias del repositorio a la vez —un worktree
+enlaza `node_modules` a la carpeta principal—, los dos servidores de Vite
+escriben en el mismo `crm/node_modules/.vite`. Como `npm run dev` lleva
+`--force`, cada arranque de un lado reconstruye la caché del otro, y la
+pantalla que estaba abierta acaba mezclando trozos de dos compilaciones: se
+congela, o entra en un bucle de «Maximum update depth exceeded» que no
+corresponde a ningún fallo del código.
+
+No es un error que se pueda buscar en el código, así que queda escrito aquí.
+Se arregla dándole a cada copia su propia caché (`cacheDir` en la
+configuración de Vite) y, si ya pasó, parando ese servidor, borrando
+`crm/node_modules/.vite` y volviéndolo a levantar.
