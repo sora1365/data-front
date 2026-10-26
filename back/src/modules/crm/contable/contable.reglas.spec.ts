@@ -3,6 +3,7 @@ import {
   costoHoraDeNomina,
   costoHoraDeTarea,
   estadoTrasMovimiento,
+  faltaParaFacturar,
   revisarArticulos,
 } from './contable.reglas';
 
@@ -165,5 +166,36 @@ describe('estadoTrasMovimiento', () => {
   it('una anulada no revive por un aviso suelto', () => {
     expect(estadoTrasMovimiento('anulada', 'facturada')).toBeNull();
     expect(estadoTrasMovimiento('anulada', 'cobrada')).toBeNull();
+  });
+});
+
+describe('faltaParaFacturar', () => {
+  const venta = { ruc: '1790012345001', razon_social: 'Empresa S.A.', monto: 300 };
+
+  it('una venta completa no le falta nada', () => {
+    expect(faltaParaFacturar(venta)).toEqual([]);
+  });
+
+  /**
+   * Una empresa creada a mano en el CRM puede no tener RUC —un cliente
+   * extranjero, una ficha a medio llenar—. El contable no puede emitir sin
+   * identificación, así que se dice en vez de mandar un nulo y que falle del
+   * otro lado.
+   */
+  it('avisa del RUC que falta', () => {
+    expect(faltaParaFacturar({ ...venta, ruc: null })).toEqual(['RUC']);
+    expect(faltaParaFacturar({ ...venta, ruc: '   ' })).toEqual(['RUC']);
+  });
+
+  it('avisa de todo lo que falta de una vez', () => {
+    expect(faltaParaFacturar({ ruc: null, razon_social: '', monto: 0 })).toEqual([
+      'RUC',
+      'razón social',
+      'importe',
+    ]);
+  });
+
+  it('un importe en cero no es facturable', () => {
+    expect(faltaParaFacturar({ ...venta, monto: 0 })).toContain('importe');
   });
 });

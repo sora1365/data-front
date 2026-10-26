@@ -191,3 +191,26 @@ export function estadoTrasMovimiento(
 function redondear(valor: number): number {
   return Math.round(valor * 100) / 100;
 }
+
+/**
+ * Qué le falta a una venta para poder facturarse.
+ *
+ * Una empresa creada a mano en el CRM puede no tener RUC —un cliente
+ * extranjero, una ficha a medio llenar— y la venta se entrega igual. El
+ * contable no puede emitir sin identificación, así que la entrega lo dice en
+ * vez de mandar un nulo y que falle del otro lado.
+ *
+ * No se bloquea la entrega: la venta ocurrió, y esconderla hasta que alguien
+ * complete la ficha es como perderla. Se entrega marcada.
+ */
+export function faltaParaFacturar(venta: {
+  ruc?: string | null;
+  razon_social?: string | null;
+  monto?: number | string | null;
+}): string[] {
+  const falta: string[] = [];
+  if (!String(venta?.ruc ?? '').trim()) falta.push('RUC');
+  if (!String(venta?.razon_social ?? '').trim()) falta.push('razón social');
+  if (!(Number(venta?.monto ?? 0) > 0)) falta.push('importe');
+  return falta;
+}

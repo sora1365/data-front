@@ -6,6 +6,7 @@ import {
   aDesactivar,
   costoHoraDeNomina,
   estadoTrasMovimiento,
+  faltaParaFacturar,
   revisarArticulos,
   type ArticuloEntrante,
   type TipoDeMovimiento,
@@ -262,7 +263,14 @@ export class ContableService {
 
   // ------------------------------------------------------------------- sale
 
-  /** Las ventas que el contable tiene pendientes, con sus líneas. */
+  /**
+   * Las ventas que el contable tiene pendientes, con sus líneas.
+   *
+   * Cada una dice **qué le falta para poder facturarse**. Una empresa creada a
+   * mano en el CRM puede no tener RUC, y entregarla con el campo en nulo hace
+   * que el fallo aparezca del otro lado, donde nadie sabe de qué venta se
+   * trata. No se esconde: la venta ocurrió y se entrega marcada.
+   */
   async ventasPendientes(desde?: string) {
     const params: any[] = [];
     let filtro = `v.estado = 'pendiente_facturacion' AND v.anulada_en IS NULL`;
@@ -271,7 +279,7 @@ export class ContableService {
       filtro += ` AND v.ganada_en >= $${params.length}`;
     }
 
-    return this.dataSource.query(
+    const filas = await this.dataSource.query(
       `SELECT v.id, v.oportunidad, v.marca, v.producto, v.monto::float8 AS monto,
               v.comercial, v.ruc, v.razon_social, v.direccion, v.estado,
               v.ganada_en, v.documento,
@@ -295,6 +303,8 @@ export class ContableService {
         ORDER BY v.ganada_en`,
       params,
     );
+
+    return filas.map((v: any) => ({ ...v, falta_para_facturar: faltaParaFacturar(v) }));
   }
 
   /**

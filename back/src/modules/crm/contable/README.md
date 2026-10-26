@@ -97,6 +97,12 @@ entró y retroceder haría desaparecer la comisión del mes.
 | `GET /crm/contable/comisiones?anio=&mes=` | Lo que hay que pagar por comercial, con su correo |
 | `GET /crm/contable/ventas/:id/movimientos` | El historial de avisos de una venta |
 
+Cada venta pendiente dice **qué le falta para poder facturarse** —RUC, razón
+social, importe—. Una empresa creada a mano en el CRM puede no tener RUC, y
+entregarla con el campo en nulo hace que el fallo aparezca del otro lado,
+donde nadie sabe de qué venta se trata. No se esconde la venta: ocurrió, y se
+entrega marcada.
+
 Las comisiones salen de las **mismas reglas** que enseña el tablero —sobre lo
 cobrado, con el umbral de cada regla— para que no haya dos cifras de comisión
 en la empresa.
