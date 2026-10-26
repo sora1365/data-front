@@ -75,6 +75,16 @@ export class PostventaController {
     return this.postventa.resumen(dias ? Number(dias) : undefined);
   }
 
+  /**
+   * Qué más venderle a quien ya es cliente.
+   *
+   * Va antes que las rutas con parámetro para que el comodín no se la trague.
+   */
+  @Get('cruzada')
+  cruzada(@Query('limite') limite?: string) {
+    return this.postventa.cruzada({ limite: limite ? Number(limite) : undefined });
+  }
+
   @Get('renovaciones')
   renovaciones(@Query('dias') dias?: string) {
     return this.postventa.renovaciones(dias ? Number(dias) : undefined);

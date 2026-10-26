@@ -515,3 +515,31 @@ No es un error que se pueda buscar en el código, así que queda escrito aquí.
 Se arregla dándole a cada copia su propia caché (`cacheDir` en la
 configuración de Vite) y, si ya pasó, parando ese servidor, borrando
 `crm/node_modules/.vite` y volviéndolo a levantar.
+
+### Venta cruzada: qué más venderle a quien ya es cliente
+
+Es la venta más fácil que hay y la que menos se hace: la segunda a quien ya
+dijo que sí una vez. Se mira sobre los clientes con venta viva y se calcula
+qué les falta del catálogo.
+
+**Cada sugerencia dice por qué está ahí** —el gestor la propone para esa
+empresa, la vende la marca que ya le factura, o está en el catálogo—. Es lo
+que separa esto de una lista mágica que nadie se cree y que se deja de mirar a
+la semana.
+
+Quedan fuera tres cosas: lo que ya compró, lo que ya tiene oportunidad abierta
+—alguien lo está trabajando, y ofrecerlo otra vez es llamar dos veces— y lo
+que rechazó, hasta que pase su plazo. Ese plazo sale de `crm.gestion`, la
+misma memoria que usa la lista de trabajo, anotada **por producto**: «no le
+interesa la auditoría» no quiere decir que no haya que volver a llamarle
+nunca.
+
+**Qué marca vende cada producto no está modelado en ningún sitio** —el
+catálogo es del gestor comercial y no tiene marca— así que se deduce de lo que
+ya se ha vendido u ofrecido. Es honesto: la marca de un producto es la que lo
+vende. Lo que nadie ha vendido todavía sale sin marca, en vez de inventarle
+una.
+
+Los clientes se ordenan por lo que facturan. No porque los demás no importen:
+la siguiente venta a quien ya gasta diez mil es más probable y más grande que
+la de quien gastó cien.

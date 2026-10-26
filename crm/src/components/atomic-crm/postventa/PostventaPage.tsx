@@ -12,6 +12,7 @@ import {
   type ResumenDePostventa,
 } from "../providers/friday/postventa";
 import { dinero } from "../providers/friday/proformas";
+import { VentaCruzada } from "./VentaCruzada";
 
 /**
  * Postventa: lo que pasa después de ganar.
@@ -109,6 +110,8 @@ export const PostventaPage = () => {
           pie="en los próximos 45 días"
         />
       </div>
+
+      <VentaCruzada />
 
       <section className="border rounded-lg p-3">
         <p className="text-xs text-muted-foreground mb-2">Renovaciones</p>

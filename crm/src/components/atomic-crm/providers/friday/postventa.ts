@@ -100,3 +100,30 @@ export const enlaceDeEncuesta = (token: string) => `${API}/crm/postventa/encuest
 /** Promotor, pasivo o detractor, con los cortes de siempre del NPS. */
 export const claseDePuntaje = (puntaje: number) =>
   puntaje >= 9 ? "promotor" : puntaje >= 7 ? "pasivo" : "detractor";
+
+// ------------------------------------------------------------ venta cruzada
+
+export interface SugerenciaDeCruce {
+  codigo: string;
+  nombre: string;
+  marca: string | null;
+  marca_nombre: string | null;
+  motivo: string;
+  prioridad: number;
+  otraMarca: boolean;
+}
+
+export interface ClienteParaCruzar {
+  company_id: string;
+  razon_social: string;
+  tipo_sujeto: string | null;
+  clave: string | null;
+  facturado: number;
+  ventas: number;
+  ultima_venta: string | null;
+  marcas: string[];
+  sugerencias: SugerenciaDeCruce[];
+}
+
+export const ventaCruzada = (limite?: number): Promise<ClienteParaCruzar[]> =>
+  pedir(`/cruzada${limite ? `?limite=${limite}` : ""}`);

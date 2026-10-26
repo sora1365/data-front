@@ -10,6 +10,7 @@ import { DataSource } from 'typeorm';
 import { diaLocal } from '../agenda/agenda.reglas';
 import { CorreoConector } from '../campanias/correo.conector';
 import { CrmService } from '../crm.service';
+import { cruzadasPara, ordenarClientes, valeLaPena } from './cruzada.reglas';
 import {
   fechaDeRenovacion,
   renovacionesQueTocan,
@@ -254,6 +255,128 @@ export class PostventaService {
     );
     if (!filas[0]) throw new NotFoundException(`No existe la venta ${venta}`);
     return filas[0];
+  }
+
+  // -------------------------------------------------------- venta cruzada
+
+  /**
+   * Qué más venderle a quien ya es cliente.
+   *
+   * Es la venta más fácil que hay y la que menos se hace: a quien ya dijo que
+   * sí una vez. Se mira sobre los clientes con venta viva, y de cada uno se
+   * calcula qué le falta del catálogo.
+   *
+   * La marca que vende cada producto no está modelada en ningún sitio —el
+   * catálogo es del gestor comercial y no tiene marca—, así que **se deduce de
+   * lo que ya se ha vendido u ofrecido**. Es honesto: la marca de un producto
+   * es la que lo vende. Si nadie lo ha vendido todavía, sale sin marca en vez
+   * de inventarle una.
+   */
+  async cruzada(opciones: { limite?: number } = {}) {
+    const limite = Math.min(opciones.limite ?? 25, 100);
+    const hoy = diaLocal();
+
+    const [clientes, catalogo, compras, abiertas, gestiones] = await Promise.all([
+      this.dataSource.query(
+        `SELECT v.company_id, emp.name AS razon_social, emp.tipo_sujeto, emp.clave,
+                sum(v.monto)::float8 AS facturado,
+                count(*)::int AS ventas,
+                max(v.ganada_en) AS ultima_venta,
+                array_agg(DISTINCT v.marca) AS marcas
+           FROM crm.venta v
+           JOIN crm.empresa emp ON emp.id = v.company_id
+          WHERE v.anulada_en IS NULL
+          GROUP BY v.company_id, emp.name, emp.tipo_sujeto, emp.clave
+          ORDER BY sum(v.monto) DESC
+          LIMIT $1`,
+        [limite],
+      ),
+      /**
+       * El catálogo con la marca deducida: la que más veces ha vendido u
+       * ofrecido cada producto. `DISTINCT ON` se queda con la primera fila de
+       * cada producto según el orden, que aquí es «la que más lo trabajó».
+       */
+      this.dataSource.query(
+        `SELECT DISTINCT ON (p.codigo)
+                p.codigo, p.nombre, o.marca, m.nombre AS marca_nombre
+           FROM producto p
+           LEFT JOIN crm.oportunidad o ON o.producto = p.codigo
+           LEFT JOIN crm.marca m ON m.codigo = o.marca
+          WHERE p.activo
+          ORDER BY p.codigo, o.marca NULLS LAST`,
+      ),
+      this.dataSource.query(
+        `SELECT company_id, producto FROM crm.venta WHERE anulada_en IS NULL`,
+      ),
+      this.dataSource.query(
+        `SELECT o.company_id, o.producto
+           FROM crm.oportunidad o
+           JOIN crm.etapa e ON e.codigo = o.etapa
+          WHERE o.archivada_en IS NULL AND NOT e.es_ganada AND NOT e.es_perdida`,
+      ),
+      this.dataSource.query(
+        `SELECT DISTINCT ON (g.tipo_sujeto, g.clave, g.producto)
+                g.tipo_sujeto, g.clave, g.producto,
+                to_char(g.reintentar_en, 'YYYY-MM-DD') AS reintentar_en
+           FROM crm.gestion g
+          WHERE g.producto IS NOT NULL
+            AND g.resultado IN ('no_interesa', 'no_contactar')
+          ORDER BY g.tipo_sujeto, g.clave, g.producto, g.ocurrido_en DESC`,
+      ),
+    ]);
+
+    const porEmpresa = (filas: any[]) => {
+      const mapa = new Map<string, string[]>();
+      for (const f of filas) {
+        const llave = String(f.company_id);
+        mapa.set(llave, [...(mapa.get(llave) ?? []), f.producto]);
+      }
+      return mapa;
+    };
+    const compradosDe = porEmpresa(compras);
+    const abiertasDe = porEmpresa(abiertas);
+
+    const resultado = [];
+    for (const cliente of clientes) {
+      const rechazados: Record<string, string | null> = {};
+      for (const g of gestiones) {
+        if (g.tipo_sujeto === cliente.tipo_sujeto && g.clave === cliente.clave) {
+          rechazados[g.producto] = g.reintentar_en;
+        }
+      }
+
+      // Lo que el gestor propone para este sujeto, si está en el padrón: una
+      // empresa creada a mano en el CRM no cae en ningún segmento.
+      let sugeridos: string[] = [];
+      if (cliente.tipo_sujeto && cliente.clave) {
+        try {
+          const delGestor = await this.crm.sugerencias(cliente.tipo_sujeto, cliente.clave);
+          sugeridos = (delGestor ?? []).map((s: any) => s.producto ?? s.codigo).filter(Boolean);
+        } catch {
+          /* sin sugerencias del gestor se cruza igual, sólo que sin ese orden */
+        }
+      }
+
+      const sugerencias = cruzadasPara(
+        catalogo,
+        {
+          comprados: compradosDe.get(String(cliente.company_id)) ?? [],
+          enCurso: abiertasDe.get(String(cliente.company_id)) ?? [],
+          rechazados,
+        },
+        {
+          sugeridosPorElGestor: sugeridos,
+          marcasDelCliente: (cliente.marcas ?? []).filter(Boolean),
+          hoy,
+        },
+      );
+
+      if (valeLaPena(sugerencias)) {
+        resultado.push({ ...cliente, sugerencias });
+      }
+    }
+
+    return ordenarClientes(resultado);
   }
 
   /** El panel: qué toca renovar, cómo va el NPS y qué encuestas faltan. */
