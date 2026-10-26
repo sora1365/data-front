@@ -15,6 +15,7 @@ import {
   type Resultado,
 } from "../providers/friday/listas";
 import { listarProductos } from "../providers/friday/campanias";
+import { Guion } from "./Guion";
 
 /**
  * La lista de trabajo del día.
@@ -181,6 +182,8 @@ export const ListasPage = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {elegido && <Guion producto={producto || undefined} segmento={elegido} />}
 
       {elegido && miembros.length === 0 && !cargando && (
         <p className="text-sm text-muted-foreground">
