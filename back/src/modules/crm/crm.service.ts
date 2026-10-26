@@ -418,10 +418,15 @@ export class CrmService {
       );
     });
 
-    const estado = await this.estadoComercial(actual.tipo_sujeto, actual.clave);
-    const nuevoEstado = estadoTrasEtapa(destino, estado?.estado ?? null);
-    if (nuevoEstado) {
-      await this.segmentos.marcarEstado(actual.tipo_sujeto, actual.clave, nuevoEstado);
+    // El estado comercial es del gestor, y sólo existe para quien está en el
+    // padrón. Una empresa sin sujeto —creada a mano, o desde un lead— no tiene
+    // estado que mover, y marcarlo con nulos fallaba al ganar la oportunidad.
+    if (actual.tipo_sujeto) {
+      const estado = await this.estadoComercial(actual.tipo_sujeto, actual.clave);
+      const nuevoEstado = estadoTrasEtapa(destino, estado?.estado ?? null);
+      if (nuevoEstado) {
+        await this.segmentos.marcarEstado(actual.tipo_sujeto, actual.clave, nuevoEstado);
+      }
     }
 
     // Ganar es lo que entrega la venta al módulo contable, y deshacerlo la
