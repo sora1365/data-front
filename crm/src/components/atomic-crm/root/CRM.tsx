@@ -63,6 +63,7 @@ import { WhatsappPage } from "../whatsapp/WhatsappPage";
 import { AgendaPage } from "../agenda/AgendaPage";
 import { CampaniasPage } from "../campanias/CampaniasPage";
 import { LeadsPage } from "../leads/LeadsPage";
+import { PautaPage } from "../pauta/PautaPage";
 import { TablerosPage } from "../tableros/TablerosPage";
 import { PreciosPage } from "../precios/PreciosPage";
 import { PostventaPage } from "../postventa/PostventaPage";
@@ -280,6 +281,7 @@ const DesktopAdmin = (
         <Route path={AgendaPage.path} element={<AgendaPage />} />
         <Route path={CampaniasPage.path} element={<CampaniasPage />} />
         <Route path={LeadsPage.path} element={<LeadsPage />} />
+        <Route path={PautaPage.path} element={<PautaPage />} />
         <Route path={TablerosPage.path} element={<TablerosPage />} />
         <Route path={SeguimientoPage.path} element={<SeguimientoPage />} />
         <Route path={PreciosPage.path} element={<PreciosPage />} />
