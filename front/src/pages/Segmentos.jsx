@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ADVERTENCIA_CREDITO, leer } from '../diagnosticoCredito'
 import {
   correrSegmento,
   correrTodos,
@@ -141,6 +143,7 @@ function Miembros({ codigo }) {
   const [filtros, setFiltros] = useState({ novedades: false, conContacto: false })
   const [datos, setDatos] = useState(null)
   const [total, setTotal] = useState(0)
+  const [impuesto, setImpuesto] = useState(null)
   const [error, setError] = useState(null)
 
   const cargar = useCallback(async () => {
@@ -153,6 +156,7 @@ function Miembros({ codigo }) {
       })
       setDatos(r.datos)
       setTotal(r.total)
+      setImpuesto(r.impuesto)
     } catch (e) {
       setError(e?.response?.data?.message ?? e.message)
     }
@@ -192,7 +196,14 @@ function Miembros({ codigo }) {
       {error && <p className="error">{error}</p>}
       {!datos && <p className="cargando">Cargando…</p>}
 
-      {datos && (
+      {datos && impuesto && (
+        <>
+          <p className="nota">{ADVERTENCIA_CREDITO}</p>
+          <TablaCredito datos={datos} impuesto={impuesto} marcar={marcar} />
+        </>
+      )}
+
+      {datos && !impuesto && (
         <div className="tabla-scroll">
           <table>
             <thead>
@@ -242,6 +253,78 @@ function Miembros({ codigo }) {
           </table>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Lista de los segmentos de devolución: el saldo del impuesto en cada ejercicio
+ * y la lectura de su trayectoria, que es lo que justifica la llamada. El texto
+ * del diagnóstico es el mismo del análisis tributario y del informe en PDF.
+ */
+function TablaCredito({ datos, impuesto, marcar }) {
+  const anios = [...new Set(datos.flatMap(d => Object.keys(d.credito?.porAnio ?? {})))].sort()
+  const nombre = impuesto === 'iva' ? 'IVA' : 'renta'
+
+  return (
+    <div className="tabla-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>RUC</th>
+            <th>Nombre</th>
+            <th>Provincia</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            {anios.map(a => (
+              <th className="der" key={a}>
+                Crédito {nombre} {a}
+              </th>
+            ))}
+            <th>Diagnóstico</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {datos.map(d => {
+            const cr = d.credito ?? {}
+            const lectura = leer(cr.diagnostico)
+            return (
+              <tr key={`${d.tipo_sujeto}-${d.clave}`}>
+                <td className="mono">{d.ruc ?? '—'}</td>
+                <td>{d.nombre}</td>
+                <td>{d.provincia ?? '—'}</td>
+                <td className="mono">{d.telefono ?? '—'}</td>
+                <td>{d.correo ?? '—'}</td>
+                {anios.map(a => (
+                  <td className="der mono" key={a}>
+                    {dinero(cr.porAnio?.[a])}
+                  </td>
+                ))}
+                <td title={lectura.texto}>{lectura.titulo}</td>
+                <td className="acciones-fila">
+                  {d.expediente && (
+                    <Link to={`/informe-tributario/${d.expediente}`}>Informe</Link>
+                  )}
+                  <button type="button" onClick={() => marcar(d, 'en_gestion')}>
+                    En gestión
+                  </button>
+                  <button type="button" onClick={() => marcar(d, 'no_contactar')}>
+                    No contactar
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+          {datos.length === 0 && (
+            <tr>
+              <td colSpan={7 + anios.length} className="vacio">
+                Nada pendiente con estos filtros.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   )
 }

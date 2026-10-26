@@ -114,6 +114,25 @@ El último está registrado a propósito con `activo = false` y su motivo en
 dentro de la herramienta en vez de vivir en la cabeza de alguien. Se desbloquea
 cuando corra la carga de DataPortal, que es la única fuente de nómina.
 
+## Devolución de impuestos
+
+| Código | Miembros | Nota |
+|---|---|---|
+| `devolucion_iva` | 8.632 | Crédito de IVA que **se acumula** y ≥ 10.000 USD en el último ejercicio |
+| `devolucion_renta` | 7.494 | Lo mismo con el crédito de impuesto a la renta |
+
+Salen del diagnóstico del análisis tributario (`credito_tributario_empresa`):
+sólo entra la etiqueta `acumula`, la única que apunta a impuesto no imputado.
+Son dos y no uno porque una misma compañía puede estar compensando un impuesto
+y acumulando el otro; las 1.881 que acumulan en ambos están en las dos listas.
+Sólo compañías: el dato sale de los balances de la Superintendencia.
+
+Su lista de trabajo es distinta: se ordena por el saldo del último ejercicio y
+trae el crédito año por año con su diagnóstico (también en el CSV), en vez de
+los activos. Los dos segmentos y su magnitud están en `SEGMENTOS_CREDITO`, en el
+servicio. Entrar en el segmento **no** dice que la devolución proceda: eso
+depende de la naturaleza del crédito, la caducidad y el respaldo.
+
 ## Un aviso que no es técnico
 
 Los segmentos que incluyen personas naturales alcanzan decenas de miles de

@@ -55,6 +55,20 @@ export const REGLA_VIGENCIA = `
   END`;
 
 /**
+ * Segmentos de devolución de impuestos y la magnitud de crédito que miran.
+ *
+ * Su lista de trabajo no se lee por activos sino por el saldo del crédito y su
+ * trayectoria, que es lo que el gestor tiene que decir en la llamada. El dato
+ * es el mismo del análisis tributario (`balance_magnitud` y
+ * `credito_tributario_empresa`): calcularlo aquí aparte daría dos saldos para la
+ * misma empresa.
+ */
+const SEGMENTOS_CREDITO: Record<string, { impuesto: 'iva' | 'ir'; magnitud: string }> = {
+  devolucion_iva: { impuesto: 'iva', magnitud: 'creditoIva' },
+  devolucion_renta: { impuesto: 'ir', magnitud: 'creditoIr' },
+};
+
+/**
  * Capa comercial: segmentos sobre `perfil_comercial`.
  *
  * ## Las condiciones son SQL, y por eso nunca vienen del cliente
@@ -305,6 +319,18 @@ export class SegmentosService {
       where.push('ec.estado IS NULL');
     }
 
+    // En los de devolución se ordena por el saldo del último ejercicio: la
+    // primera página tiene que ser la de las devoluciones más grandes. La
+    // magnitud sale de la constante, no del cliente.
+    const credito = SEGMENTOS_CREDITO[codigo];
+    const joinCredito = credito
+      ? `LEFT JOIN balance_magnitud bm
+           ON bm.anio = p.anio_ult AND bm.expediente = p.expediente`
+      : '';
+    const orden = credito
+      ? `m.desde DESC, (bm.magnitudes->>'${credito.magnitud}')::numeric DESC NULLS LAST, p.nombre`
+      : 'm.desde DESC, p.nombre';
+
     params.push(limit, offset);
 
     const datos = await this.dataSource.query(
@@ -332,11 +358,14 @@ export class SegmentosService {
            ON p.tipo_sujeto = m.tipo_sujeto AND p.clave = m.clave
          LEFT JOIN sujeto_estado_comercial ec
            ON ec.tipo_sujeto = m.tipo_sujeto AND ec.clave = m.clave
+         ${joinCredito}
         WHERE ${where.join(' AND ')}
-        ORDER BY m.desde DESC, p.nombre
+        ORDER BY ${orden}
         LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );
+
+    if (credito) await this.adjuntarCredito(datos, credito.impuesto);
 
     const [{ n }] = await this.dataSource.query(
       `SELECT count(*)::int AS n
@@ -349,7 +378,49 @@ export class SegmentosService {
       params.slice(0, params.length - 2),
     );
 
-    return { total: n, datos };
+    return { total: n, datos, impuesto: credito?.impuesto ?? null };
+  }
+
+  /**
+   * Añade a cada fila el saldo del impuesto año por año y su diagnóstico.
+   *
+   * Va en una segunda consulta, sólo para los expedientes de la página: unida
+   * al listado, la vista del diagnóstico se calcularía entera para cada página.
+   * Con `= ANY` el filtro baja hasta la ventana de la vista y tarda decenas de
+   * milisegundos.
+   */
+  private async adjuntarCredito(datos: any[], impuesto: 'iva' | 'ir') {
+    const expedientes = datos.map(d => d.expediente).filter(Boolean);
+    if (!expedientes.length) return;
+
+    const magnitud = impuesto === 'iva' ? 'creditoIva' : 'creditoIr';
+    const series = await this.dataSource.query(
+      `SELECT expediente,
+              jsonb_object_agg(anio, (magnitudes->>'${magnitud}')::numeric) AS por_anio
+         FROM balance_magnitud
+        WHERE expediente = ANY($1)
+        GROUP BY expediente`,
+      [expedientes],
+    );
+    const diagnosticos = await this.dataSource.query(
+      `SELECT expediente, ultimo_anio,
+              ${impuesto}_ini AS inicial, ${impuesto}_ult AS ultimo, ${impuesto}_max AS maximo,
+              ${impuesto}_sube AS sube, ${impuesto}_baja AS baja,
+              diagnostico_${impuesto} AS diagnostico
+         FROM credito_tributario_empresa
+        WHERE expediente = ANY($1)`,
+      [expedientes],
+    );
+
+    const serie = new Map<string, Record<string, number>>(
+      series.map((s: any) => [s.expediente, s.por_anio]),
+    );
+    const diag = new Map<string, Record<string, unknown>>(
+      diagnosticos.map((d: any) => [d.expediente, d]),
+    );
+    for (const fila of datos) {
+      fila.credito = { porAnio: serie.get(fila.expediente) ?? {}, ...(diag.get(fila.expediente) ?? {}) };
+    }
   }
 
   /**
@@ -360,7 +431,7 @@ export class SegmentosService {
    * una sola cadena es la forma más fácil de tumbar el proceso.
    */
   async exportarCsv(codigo: string, incluirGestionados = false): Promise<string> {
-    const { datos, total } = await this.miembros(codigo, {
+    const { datos, total, impuesto } = await this.miembros(codigo, {
       limit: MAX_EXPORT,
       tope: MAX_EXPORT,
       incluirGestionados,
@@ -395,9 +466,23 @@ export class SegmentosService {
       return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
 
-    const lineas = [columnas.join(';')];
+    // En los de devolución, el saldo de cada ejercicio y el diagnóstico: es la
+    // razón por la que la empresa está en la lista.
+    const anios = impuesto
+      ? [...new Set<string>(datos.flatMap((f: any) => Object.keys(f.credito?.porAnio ?? {})))].sort()
+      : [];
+    const cabecera = impuesto
+      ? [...columnas, ...anios.map(a => `credito_${impuesto}_${a}`), `diagnostico_${impuesto}`]
+      : columnas;
+
+    const lineas = [cabecera.join(';')];
     for (const fila of datos) {
-      lineas.push(columnas.map((c) => escapar((fila as any)[c])).join(';'));
+      const valores = columnas.map((c) => escapar((fila as any)[c]));
+      if (impuesto) {
+        const cr = (fila as any).credito ?? {};
+        valores.push(...anios.map(a => escapar(cr.porAnio?.[a])), escapar(cr.diagnostico));
+      }
+      lineas.push(valores.join(';'));
     }
     if (total > datos.length) {
       lineas.push(`# ${total - datos.length} filas más no se exportaron (tope ${MAX_EXPORT})`);
