@@ -2,37 +2,17 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Post,
   Put,
   Query,
-  Req,
   Res,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { Usuario } from '../../common/http/usuario.decorator';
 import { CrmRestService } from './crm-rest.service';
 import { CrmCoincidenciasService } from './crm-coincidencias.service';
-import { problemaAlEscribirComercial } from './auth/acceso.reglas';
-import type { Sesion } from './auth/acceso.service';
-
-/**
- * Los usuarios del CRM (`sales`) son un recurso más de este API, y sin esta
- * comprobación cualquiera se haría administrador con un PUT sobre su ficha.
- */
-function vigilarComerciales(
-  req: Request & { user?: Sesion },
-  recurso: string,
-  operacion: 'crear' | 'editar' | 'borrar',
-  id?: string,
-  cuerpo?: Record<string, any>,
-) {
-  if (recurso !== 'sales') return;
-  const problema = problemaAlEscribirComercial(req.user as Sesion, operacion, id, cuerpo);
-  if (problema) throw new ForbiddenException(problema);
-}
 
 /**
  * El API que consumen las pantallas del CRM.
@@ -96,9 +76,7 @@ export class CrmRestController {
     @Param('recurso') recurso: string,
     @Body() cuerpo: Record<string, any>,
     @Usuario() usuario: string,
-    @Req() req: Request,
   ) {
-    vigilarComerciales(req, recurso, 'crear');
     return this.rest.create(recurso, cuerpo, usuario);
   }
 
@@ -108,15 +86,12 @@ export class CrmRestController {
     @Param('id') id: string,
     @Body() cuerpo: Record<string, any>,
     @Usuario() usuario: string,
-    @Req() req: Request,
   ) {
-    vigilarComerciales(req, recurso, 'editar', id, cuerpo);
     return this.rest.update(recurso, id, cuerpo, usuario);
   }
 
   @Delete(':recurso/:id')
-  remove(@Param('recurso') recurso: string, @Param('id') id: string, @Req() req: Request) {
-    vigilarComerciales(req, recurso, 'borrar', id);
+  remove(@Param('recurso') recurso: string, @Param('id') id: string) {
     return this.rest.remove(recurso, id);
   }
 }

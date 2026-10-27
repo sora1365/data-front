@@ -20,7 +20,6 @@
     "fixture": "ts-node scripts/generate-fixture.ts",
     "percentiles": "ts-node scripts/recalcular-percentiles.ts",
     "coeficientes": "ts-node scripts/cargar-coeficientes.ts",
-    "crm:clave": "ts-node scripts/crm-clave.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

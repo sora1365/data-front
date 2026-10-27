@@ -1,4 +1,4 @@
-import { firma } from "./dataProvider";
+import { usuarioActual } from "./dataProvider";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const BASE = `${API}/crm/listas`;
@@ -55,7 +55,7 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
     ...opciones,
     headers: {
       "Content-Type": "application/json",
-      ...firma(),
+      "X-Usuario": usuarioActual(),
       ...(opciones.headers as Record<string, string>),
     },
   });
@@ -171,7 +171,7 @@ export const guionAplicable = async (
   if (producto) busca.set("producto", producto);
   if (segmento) busca.set("segmento", segmento);
   const respuesta = await fetch(`${API}/crm/guiones/aplicable?${busca}`, {
-    headers: { ...firma() },
+    headers: { "X-Usuario": usuarioActual() },
   });
   if (!respuesta.ok) return null;
   const guion = await respuesta.json();
@@ -180,7 +180,7 @@ export const guionAplicable = async (
 
 export const listarGuiones = async (): Promise<Guion[]> => {
   const respuesta = await fetch(`${API}/crm/guiones`, {
-    headers: { ...firma() },
+    headers: { "X-Usuario": usuarioActual() },
   });
   if (!respuesta.ok) return [];
   return respuesta.json();
@@ -189,7 +189,7 @@ export const listarGuiones = async (): Promise<Guion[]> => {
 export const guardarGuion = async (def: Record<string, unknown>): Promise<Guion> => {
   const respuesta = await fetch(`${API}/crm/guiones`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...firma() },
+    headers: { "Content-Type": "application/json", "X-Usuario": usuarioActual() },
     body: JSON.stringify(def),
   });
   if (!respuesta.ok) {

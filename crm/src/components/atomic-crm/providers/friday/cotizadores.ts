@@ -1,4 +1,4 @@
-import { firma } from "./dataProvider";
+import { usuarioActual } from "./dataProvider";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const BASE = `${API}/crm/cotizadores`;
@@ -69,7 +69,7 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
     ...opciones,
     headers: {
       "Content-Type": "application/json",
-      ...firma(),
+      "X-Usuario": usuarioActual(),
       ...(opciones.headers as Record<string, string>),
     },
   });
@@ -155,7 +155,7 @@ const INVENTARIO = `${API}/crm/inventario`;
 
 async function pedirInventario(ruta: string) {
   const respuesta = await fetch(`${INVENTARIO}${ruta}`, {
-    headers: { ...firma() },
+    headers: { "X-Usuario": usuarioActual() },
   });
   if (!respuesta.ok) throw new Error(`${respuesta.status} ${respuesta.statusText}`);
   return respuesta.json();

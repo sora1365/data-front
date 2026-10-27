@@ -1,4 +1,4 @@
-import { firma } from "./dataProvider";
+import { usuarioActual } from "./dataProvider";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const BASE = `${API}/crm`;
@@ -133,7 +133,7 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
     ...opciones,
     headers: {
       "Content-Type": "application/json",
-      ...firma(),
+      "X-Usuario": usuarioActual(),
       ...(opciones.headers as Record<string, string>),
     },
   });

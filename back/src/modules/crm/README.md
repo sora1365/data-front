@@ -102,17 +102,13 @@ exige sujeto.
 
 ## Quién firma
 
-Firma la sesión. Todo `/crm` pasa por `CrmAuthGuard` (`auth/`), que deja la
-persona en `req.user`; `@Usuario()` la lee de ahí e **ignora `X-Usuario`**, que
-sólo sigue valiendo fuera del CRM. Detalles en `auth/README.md`.
-
-Las altas las da un administrador (`POST /crm/auth/usuarios`). Los
-`INSERT … ON CONFLICT DO NOTHING` sobre `crm.comercial` que quedan en los
-servicios son de cuando el comercial se creaba solo al firmar; con sesión ya
-existe siempre, así que no hacen nada. Asignarle la venta a *otro* exige que
-exista y esté activo: ahí el nombre lo escribe quien reparte el trabajo y un
-error de dedo crearía un comercial fantasma con oportunidades que no vería
-nadie.
+Toda escritura exige `X-Usuario` (`common/http/usuario.decorator.ts`). El
+comercial **se da de alta solo la primera vez que firma**: mientras no haya
+autenticación no existe un alta previa de usuarios, y exigir que alguien los
+registre antes convertiría la primera oportunidad de cada persona en un error de
+clave foránea. Asignarle la venta a *otro* sí exige que exista: ahí el nombre lo
+escribe quien reparte el trabajo y un error de dedo crearía un comercial
+fantasma con oportunidades que no vería nadie.
 
 ## Endpoints
 

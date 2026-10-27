@@ -1,44 +1,36 @@
 import { useState } from "react";
-import { useLogin, useNotify, useRedirect } from "ra-core";
+import { useLogin, useNotify } from "ra-core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CambiarClave } from "./Claves";
 
 /**
- * La entrada al CRM: usuario y clave.
+ * La entrada al CRM.
  *
- * Sustituye a la pantalla de Atomic, que entra por correo y manda enlaces de
- * Supabase. Aquí las cuentas las da de alta un administrador con una clave
- * provisional, y la primera entrada pide cambiarla antes de dejar pasar: es
- * el segundo paso de esta misma pantalla, para no perder a nadie entre dos
- * rutas.
+ * Sustituye a la pantalla de acceso de Atomic, que pide correo y contraseña.
+ * FRIDAY no tiene ni lo uno ni lo otro: lo que guarda de cada cambio es quién
+ * lo hizo, en la cabecera `X-Usuario`. Pedir una contraseña que no se
+ * comprueba contra nada sería aparentar una seguridad inexistente, y la
+ * primera persona que la escriba creerá que su cuenta está protegida.
  *
- * No dice si lo que falló es el usuario o la clave —el servidor tampoco lo
- * dice—: distinguirlo le regala a quien prueba la mitad del trabajo.
+ * Así que esto pide lo único que se usa de verdad —el nombre— y dice para qué
+ * sirve.
  */
 export const FirmaPage = () => {
   const login = useLogin();
   const notify = useNotify();
-  const redirect = useRedirect();
-  const [usuario, setUsuario] = useState("");
-  const [clave, setClave] = useState("");
+  const [nombre, setNombre] = useState("");
   const [entrando, setEntrando] = useState(false);
-  const [provisional, setProvisional] = useState<string | null>(null);
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario.trim() || !clave) return;
+    if (!nombre.trim()) return;
     setEntrando(true);
     try {
-      await login({ username: usuario.trim(), password: clave });
+      await login({ username: nombre.trim() });
     } catch (error: any) {
-      if (error?.debeCambiarClave) {
-        setProvisional(clave);
-      } else {
-        notify(error?.message ?? "No se pudo entrar", { type: "error" });
-      }
+      notify(error?.message ?? "No se pudo entrar", { type: "error" });
       setEntrando(false);
     }
   };
@@ -47,59 +39,28 @@ export const FirmaPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>{provisional ? "Elige tu clave" : "FRIDAY CRM"}</CardTitle>
+          <CardTitle>FRIDAY CRM</CardTitle>
         </CardHeader>
         <CardContent>
-          {provisional ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                Entraste con una clave provisional, que ha visto otra persona.
-                Elige la tuya para seguir.
-              </p>
-              <CambiarClave
-                actualConocida={provisional}
-                onHecho={() => {
-                  setProvisional(null);
-                  redirect("/");
-                  // react-admin recuerda que la comprobación falló; recargar
-                  // es la forma corta de que vuelva a preguntar con la sesión
-                  // nueva.
-                  window.location.reload();
-                }}
+          <form onSubmit={enviar} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="nombre">Tu nombre</Label>
+              <Input
+                id="nombre"
+                value={nombre}
+                autoFocus
+                placeholder="Como quieres que aparezca"
+                onChange={(e) => setNombre(e.target.value)}
               />
-            </div>
-          ) : (
-            <form onSubmit={enviar} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="usuario">Usuario</Label>
-                <Input
-                  id="usuario"
-                  value={usuario}
-                  autoFocus
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  onChange={(e) => setUsuario(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="clave">Clave</Label>
-                <Input
-                  id="clave"
-                  type="password"
-                  value={clave}
-                  autoComplete="current-password"
-                  onChange={(e) => setClave(e.target.value)}
-                />
-              </div>
-              <Button type="submit" disabled={entrando || !usuario.trim() || !clave}>
-                {entrando ? "Entrando…" : "Entrar"}
-              </Button>
               <p className="text-xs text-muted-foreground">
-                ¿No tienes cuenta o perdiste la clave? Pídesela a un
-                administrador del CRM.
+                Todo lo que hagas queda firmado con este nombre. Todavía no hay
+                contraseñas: esto identifica, no protege.
               </p>
-            </form>
-          )}
+            </div>
+            <Button type="submit" disabled={entrando || !nombre.trim()}>
+              {entrando ? "Entrando…" : "Entrar"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

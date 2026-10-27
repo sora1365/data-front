@@ -16,71 +16,28 @@ import { defaultConfiguration } from "../../root/defaultConfiguration";
  * NestJS en `/crm/api`, que devuelve el total en la cabecera `Content-Range`
  * como espera react-admin.
  *
- * Cada petición lleva la sesión en `Authorization`. Quién firma lo que se
- * escribe lo saca el servidor de ahí, no de lo que diga el navegador.
+ * El usuario viaja en `X-Usuario`, que es como firma todo lo que se escribe en
+ * FRIDAY. Mientras no haya autenticación de verdad, ese nombre lo elige la
+ * persona y se guarda aquí mismo; el día que haya un login, este es el único
+ * archivo que cambia.
  */
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const BASE = `${API}/crm/api`;
 
-/** Lo que devuelve el servidor al entrar, tal cual se guarda. */
-export interface SesionCrm {
-  token: string;
-  usuario: string;
-  administrador: boolean;
-  debeCambiarClave: boolean;
-}
+export const USUARIO_KEY = "usuario";
 
-const SESION_KEY = "friday-crm-sesion";
+export const usuarioActual = () =>
+  localStorage.getItem(USUARIO_KEY)?.trim() || "";
 
-/**
- * La sesión vive en `localStorage` para que sobreviva a cerrar la pestaña: un
- * comercial abre el CRM veinte veces al día y pedirle la clave cada vez es
- * cómo acaba apuntada en un pósit. Caduca sola en el servidor (12 h).
- */
-export function sesionActual(): SesionCrm | null {
-  try {
-    const guardada = localStorage.getItem(SESION_KEY);
-    return guardada ? JSON.parse(guardada) : null;
-  } catch {
-    return null;
-  }
-}
-
-export const fijarSesion = (sesion: SesionCrm | null) =>
-  sesion
-    ? localStorage.setItem(SESION_KEY, JSON.stringify(sesion))
-    : localStorage.removeItem(SESION_KEY);
-
-export const usuarioActual = () => sesionActual()?.usuario ?? "";
-
-/** La cabecera que identifica cada petición. Vacía si no hay sesión. */
-export const firma = (): Record<string, string> => {
-  const token = sesionActual()?.token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+export const fijarUsuario = (valor: string) =>
+  localStorage.setItem(USUARIO_KEY, valor.trim());
 
 const cabeceras = (extra: Record<string, string> = {}) => ({
   "Content-Type": "application/json",
-  ...firma(),
+  "X-Usuario": usuarioActual(),
   ...extra,
 });
-
-/** Las llamadas de entrada, que van a `/crm/auth` y no al API de recursos. */
-export async function pedirAuth(ruta: string, cuerpo?: unknown) {
-  const respuesta = await fetch(`${API}/crm/auth${ruta}`, {
-    method: cuerpo === undefined ? "GET" : "POST",
-    headers: cabeceras(),
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-  });
-  const datos = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) {
-    const error: any = new Error(datos?.message ?? `${respuesta.status} ${respuesta.statusText}`);
-    error.status = respuesta.status;
-    throw error;
-  }
-  return datos;
-}
 
 async function pedir(ruta: string, opciones: RequestInit = {}) {
   const respuesta = await fetch(`${BASE}${ruta}`, {
@@ -329,24 +286,12 @@ export const dataProvider = {
     return resultados.flat();
   },
 
-  /**
-   * Dar de alta a un usuario. Devuelve, además de su ficha, la clave
-   * provisional: es la única vez que se puede ver, así que la pantalla de alta
-   * la enseña en lugar de volver a la lista.
-   */
-  async salesCreate(body: SalesFormData & { usuario?: string }) {
-    const { usuario, claveProvisional } = await pedirAuth("/usuarios", body);
-    const respuesta = await pedir(`/sales/${encodeURIComponent(usuario)}`);
-    return { ...(await respuesta.json()), claveProvisional };
-  },
-
-  /** Clave provisional nueva para otra persona. Sólo administradores. */
-  async restablecerClave(usuario: Identifier): Promise<string> {
-    const { claveProvisional } = await pedirAuth(
-      `/usuarios/${encodeURIComponent(String(usuario))}/restablecer`,
-      {},
-    );
-    return claveProvisional;
+  async salesCreate(body: SalesFormData) {
+    const respuesta = await pedir(`/sales`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return respuesta.json();
   },
 
   async salesUpdate(id: Identifier, data: Partial<SalesFormData>) {
@@ -357,17 +302,19 @@ export const dataProvider = {
     return respuesta.json();
   },
 
-  // Atomic llama a estos dos desde sus pantallas. En FRIDAY nadie se registra
-  // solo —las altas las da un administrador— y la clave se cambia desde
-  // «Cambiar clave», que pide la actual; fallan diciendo dónde ir en vez de
-  // fingir que funcionaron.
+  // ---------------------------------------------------------------- sin auth
+  // FRIDAY todavía no tiene autenticación: la identidad es la cabecera
+  // `X-Usuario`. Estos tres métodos existen porque las pantallas de Atomic los
+  // llaman, y fallan diciendo qué falta en vez de fingir que funcionaron.
 
   async signUp(_: SignUpData): Promise<never> {
-    throw new Error("Las cuentas del CRM las da de alta un administrador.");
+    throw new Error(
+      "FRIDAY todavía no tiene registro de usuarios. Escribe tu nombre en el perfil: es lo que firma lo que hagas.",
+    );
   },
 
   async updatePassword(): Promise<never> {
-    throw new Error("Usa «Cambiar clave», en el menú de tu usuario.");
+    throw new Error("FRIDAY todavía no tiene contraseñas que cambiar.");
   },
 
   async mergeContacts(_: Identifier, __: Identifier): Promise<Contact> {

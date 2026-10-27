@@ -71,9 +71,8 @@ en Google y medio en Microsoft.
 
 ## Lo que todavía no es verdad
 
-- **Los permisos no llegan al registro.** Hay usuario y clave (ver «Entrar con
-  clave», abajo), pero un comercial ve todos los clientes y oportunidades: el
-  rol sólo decide quién gestiona usuarios.
+- **No hay autenticación.** El nombre que se escribe al entrar firma lo que se
+  hace; no se comprueba contra nada. Identifica, no protege.
 - **WhatsApp no está conectado.** Hace falta cuenta de WhatsApp Business
   Platform, número verificado y plantillas aprobadas por Meta; el trámite tarda
   días.
@@ -544,27 +543,3 @@ una.
 Los clientes se ordenan por lo que facturan. No porque los demás no importen:
 la siguiente venta a quien ya gasta diez mil es más probable y más grande que
 la de quien gastó cien.
-
-## Entrar con clave
-
-El nombre que se escribía al entrar firmaba todo sin comprobarse contra nada.
-Con el RUC, los precios y las comisiones de todos los clientes detrás, eso
-dejaba de valer en cuanto el CRM saliera del ordenador de quien lo construye.
-Ahora es usuario y clave, y la identidad sigue siendo `crm.comercial.usuario`:
-la clave se le añade a la persona que ya firmaba, así que nada de lo escrito
-hasta hoy hay que migrarlo.
-
-- **Nadie se registra solo.** Un administrador da de alta y el CRM le enseña
-  una clave provisional una sola vez; la primera entrada pide cambiarla, porque
-  esa clave la ha visto otra persona. El primer administrador sale de la
-  terminal (`npm run crm:clave -- <usuario> --admin`).
-- **Desactivar es echar.** La sesión se comprueba contra la base en cada
-  petición, no sólo su firma: desactivar a alguien o restablecerle la clave le
-  cierra la sesión en la siguiente petición, no dentro de doce horas.
-- **El servidor decide quién firma**, desde la sesión. La cabecera `X-Usuario`
-  se ignora en el CRM: si mandara ella, cualquiera con cuenta firmaría por otro.
-- **Lo público se declara.** El guardia cierra todo `/crm` y cada ruta que
-  abre alguien sin cuenta —proforma, encuesta, baja, formulario— lleva
-  `@Publico()` escrito. Olvidarlo deja una ruta cerrada, no abierta.
-
-Detalles en `back/src/modules/crm/auth/README.md`.

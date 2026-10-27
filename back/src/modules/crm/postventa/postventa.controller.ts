@@ -12,7 +12,6 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Publico } from '../auth/publico.decorator';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { PostventaService } from './postventa.service';
 
@@ -27,7 +26,6 @@ export class PostventaController {
    * enlace no tiene cuenta en el CRM. Va antes que el resto para que el
    * comodín no se la trague.
    */
-  @Publico()
   @Get('encuesta/:token')
   @Header('Content-Type', 'text/html; charset=utf-8')
   async ver(@Param('token') token: string, @Res({ passthrough: true }) res: Response) {
@@ -45,7 +43,6 @@ export class PostventaController {
     }
   }
 
-  @Publico()
   @Post('encuesta/:token')
   @HttpCode(200)
   @Header('Content-Type', 'text/html; charset=utf-8')

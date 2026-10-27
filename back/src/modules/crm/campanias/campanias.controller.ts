@@ -18,7 +18,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { crearMulterConfig } from '../../imports/multer.config';
 import type { Response } from 'express';
-import { Publico } from '../auth/publico.decorator';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { CampaniasService } from './campanias.service';
 
@@ -167,7 +166,6 @@ export class CampaniasController {
    * Devuelve una página y no JSON porque esto lo abre una persona en su
    * navegador, no un programa.
    */
-  @Publico()
   @Get('baja/:token')
   @Header('Content-Type', 'text/html; charset=utf-8')
   async baja(@Param('token') token: string, @Res({ passthrough: true }) res: Response) {
@@ -194,7 +192,6 @@ export class CampaniasController {
    * bloquean las imágenes, así que un correo sin apertura registrada no
    * significa que nadie lo leyera, y un error aquí no puede romper la imagen.
    */
-  @Publico()
   @Get('abierto/:token.gif')
   @Header('Content-Type', 'image/gif')
   @Header('Cache-Control', 'no-store')
