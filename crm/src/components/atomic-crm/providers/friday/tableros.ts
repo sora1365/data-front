@@ -1,4 +1,4 @@
-import { usuarioActual } from "./dataProvider";
+import { firma } from "./dataProvider";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -42,7 +42,7 @@ export const resumenDeTableros = async (
   if (filtros.comercial) busca.set("comercial", filtros.comercial);
 
   const respuesta = await fetch(`${API}/crm/tableros?${busca}`, {
-    headers: { "X-Usuario": usuarioActual() },
+    headers: { ...firma() },
   });
   if (!respuesta.ok) {
     let mensaje = `${respuesta.status} ${respuesta.statusText}`;
@@ -136,7 +136,7 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
     ...opciones,
     headers: {
       "Content-Type": "application/json",
-      "X-Usuario": usuarioActual(),
+      ...firma(),
       ...(opciones.headers as Record<string, string>),
     },
   });

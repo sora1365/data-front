@@ -14,6 +14,7 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { Publico } from '../auth/publico.decorator';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { WhatsappService } from './whatsapp.service';
@@ -87,6 +88,7 @@ export class WhatsappController {
    * suscripción no se activa y no hay mensaje de error que lo explique: Meta
    * sólo dice que no pudo verificar.
    */
+  @Publico()
   @Get('webhook')
   verificar(
     @Query('hub.mode') modo: string,
@@ -112,6 +114,7 @@ export class WhatsappController {
    * suscripción entera: un mensaje mal formado dejaría al CRM sin recibir nada
    * de nadie. Lo que no se pueda procesar se registra y se sigue.
    */
+  @Publico()
   @Post('webhook')
   @HttpCode(200)
   async recibir(@Body() cuerpo: any, @Req() peticion: RawBodyRequest<Request>) {

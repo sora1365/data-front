@@ -1,61 +1,75 @@
 import type { AuthProvider } from "ra-core";
-import { fijarUsuario, usuarioActual } from "./dataProvider";
+import { canAccess } from "../commons/canAccess";
+import { fijarSesion, pedirAuth, sesionActual, type SesionCrm } from "./dataProvider";
 
 /**
- * La identidad mientras FRIDAY no tenga autenticación.
+ * La entrada al CRM con usuario y clave.
  *
- * El resto de FRIDAY firma cada escritura con la cabecera `X-Usuario`: no hay
- * contraseñas ni sesiones, sólo un nombre que la persona escribe una vez. Este
- * proveedor hace lo mismo para que las pantallas de Atomic —que esperan un
- * usuario identificado— funcionen sin fingir una seguridad que no existe.
+ * El servidor emite una sesión (`/crm/auth/entrar`) y la comprueba en cada
+ * petición contra la base, así que desactivar a alguien o cambiarle la clave
+ * le cierra la sesión en la siguiente petición, sin esperar a que caduque.
  *
- * **No protege nada, y así tiene que leerse.** `checkAuth` sólo exige que haya
- * un nombre escrito, porque sin él el servidor rechaza toda escritura y la
- * persona vería errores sin entender por qué. El día que haya un login de
- * verdad, este archivo y `dataProvider.ts` son los únicos que cambian.
+ * Con clave provisional la sesión sólo sirve para cambiarla: `checkAuth` la
+ * trata como «sin entrar» para que la pantalla de acceso, que es la que sabe
+ * pedir la nueva, siga delante.
  */
 export const authProvider: AuthProvider = {
-  async login({ username }: { username?: string }) {
-    if (!username?.trim()) {
-      throw new Error("Escribe tu nombre: es lo que firma todo lo que hagas.");
+  async login({ username, password }: { username?: string; password?: string }) {
+    if (!username?.trim() || !password) {
+      throw new Error("Escribe tu usuario y tu clave.");
     }
-    fijarUsuario(username);
+    const sesion: SesionCrm = await pedirAuth("/entrar", {
+      usuario: username.trim(),
+      clave: password,
+    });
+    fijarSesion(sesion);
+    if (sesion.debeCambiarClave) {
+      // La pantalla de acceso lo detecta y pide la nueva. Se lanza para que
+      // react-admin no navegue al tablero con una sesión que no sirve.
+      const error: any = new Error("Tienes que cambiar la clave provisional.");
+      error.debeCambiarClave = true;
+      throw error;
+    }
   },
 
   async logout() {
-    // No se borra el nombre: no es una sesión, es la firma de quien usa este
-    // ordenador. Borrarla obligaría a reescribirla cada mañana.
+    fijarSesion(null);
   },
 
   async checkAuth() {
-    if (!usuarioActual()) {
-      throw new Error("Falta tu nombre para poder firmar lo que hagas.");
+    const sesion = sesionActual();
+    if (!sesion?.token || sesion.debeCambiarClave) {
+      throw new Error("Hace falta entrar al CRM.");
     }
   },
 
   async checkError(error: { status?: number }) {
-    // Sin sesiones no hay nada que caduque: un 401 o un 403 aquí significaría
-    // que el servidor cambió, no que haya que volver a entrar.
+    // 401: la sesión caducó, se cerró al cambiar la clave en otro sitio o la
+    // persona fue desactivada. 403 no: es «esto no te toca», y echar a alguien
+    // del CRM por pulsar un botón de administrador sería castigarle por mirar.
     if (error?.status === 401) {
-      throw new Error("El servidor pide autenticación y el CRM todavía no la tiene.");
+      fijarSesion(null);
+      throw new Error("La sesión ha caducado. Vuelve a entrar.");
     }
   },
 
   async getIdentity() {
-    const usuario = usuarioActual();
-    return { id: usuario, fullName: usuario };
+    const sesion = sesionActual();
+    if (!sesion) throw new Error("Sin sesión");
+    return { id: sesion.usuario, fullName: sesion.usuario };
   },
 
   async getPermissions() {
-    // Todo el mundo es administrador mientras no haya roles. El valor importa:
-    // la comprobación que trae Atomic (`providers/commons/canAccess.ts`)
-    // esconde la pantalla de usuarios a quien no lo sea.
-    return "admin";
+    // Atomic esconde la gestión de usuarios a quien no sea "admin"
+    // (`providers/commons/canAccess.ts`). El servidor lo vuelve a comprobar:
+    // esto sólo decide qué se enseña.
+    return sesionActual()?.administrador ? "admin" : "user";
   },
 
-  // `canAccess` se deja sin implementar a propósito: react-admin sólo filtra
-  // rutas cuando el proveedor lo define, y aquí no hay permisos que aplicar.
-  // Declararlo devolviendo `true` no es lo mismo que no tenerlo, y deja
-  // pantallas fuera del menú sin decir por qué. Los permisos llegan con el
-  // bloque de roles.
+  // La regla de Atomic: quien no es administrador no ve usuarios ni
+  // configuración. Antes no se declaraba porque no había roles y todo el mundo
+  // era "admin"; ahora sí los hay.
+  async canAccess(params) {
+    return canAccess(sesionActual()?.administrador ? "admin" : "user", params);
+  },
 };

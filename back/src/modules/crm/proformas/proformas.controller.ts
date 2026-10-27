@@ -13,6 +13,7 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Publico } from '../auth/publico.decorator';
 import { Usuario } from '../../../common/http/usuario.decorator';
 import { ProformasService } from './proformas.service';
 
@@ -47,6 +48,7 @@ export class ProformasController {
    * cuenta en el CRM. Va declarada antes que `:id` porque Nest resuelve por
    * orden y el comodín se tragaría «ver».
    */
+  @Publico()
   @Get('ver/:token')
   @Header('Content-Type', 'text/html; charset=utf-8')
   async ver(@Param('token') token: string, @Res({ passthrough: true }) res: Response) {
@@ -62,6 +64,7 @@ export class ProformasController {
     }
   }
 
+  @Publico()
   @Post('ver/:token/aceptar')
   @HttpCode(200)
   @Header('Content-Type', 'text/html; charset=utf-8')
@@ -87,6 +90,7 @@ export class ProformasController {
     }
   }
 
+  @Publico()
   @Post('ver/:token/rechazar')
   @HttpCode(200)
   @Header('Content-Type', 'text/html; charset=utf-8')

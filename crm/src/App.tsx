@@ -10,8 +10,7 @@ import { FirmaPage } from "@/components/atomic-crm/providers/friday/FirmaPage";
  *
  * Los proveedores son los de FRIDAY y no los de Supabase: los datos viven en
  * el Postgres del proyecto, detrás del API de NestJS. La pantalla de entrada
- * pide sólo el nombre, porque es lo único que FRIDAY usa para firmar lo que se
- * escribe; no hay contraseñas que comprobar.
+ * pide usuario y clave; las cuentas las da de alta un administrador.
  */
 const App = () => (
   <CRM

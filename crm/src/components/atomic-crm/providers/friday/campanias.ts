@@ -1,4 +1,4 @@
-import { usuarioActual } from "./dataProvider";
+import { firma } from "./dataProvider";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const BASE = `${API}/crm/campanias`;
@@ -42,7 +42,7 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
     ...opciones,
     headers: {
       "Content-Type": "application/json",
-      "X-Usuario": usuarioActual(),
+      ...firma(),
       ...(opciones.headers as Record<string, string>),
     },
   });
@@ -141,7 +141,7 @@ export async function subirAdjunto(campania: string, archivo: File): Promise<Adj
 
   const respuesta = await fetch(`${BASE}/${campania}/adjuntos`, {
     method: "POST",
-    headers: { "X-Usuario": usuarioActual() },
+    headers: { ...firma() },
     body: cuerpo,
   });
 

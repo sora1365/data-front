@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Header, Headers, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { Publico } from '../auth/publico.decorator';
 import { LeadsService } from './leads.service';
 import { paginaFormulario, paginaGracias, paginaNoDisponible } from './formulario.html';
 
@@ -12,6 +13,7 @@ import { paginaFormulario, paginaGracias, paginaNoDisponible } from './formulari
  * para un lead nuevo, para uno repetido y para un robot. Contestar distinto
  * permitiría averiguar quién es cliente probando correos.
  */
+@Publico()
 @Controller('crm/publico/f')
 export class LeadsPublicoController {
   constructor(private readonly leads: LeadsService) {}

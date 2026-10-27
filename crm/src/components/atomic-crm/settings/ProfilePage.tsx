@@ -34,7 +34,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ImageEditorField from "../misc/ImageEditorField";
+import { CambiarClave } from "../providers/friday/Claves";
 import type { CrmDataProvider } from "../providers/types";
 import { getSalesErrorNotification } from "../sales/salesErrorNotification";
 import type { Sale, SalesFormData } from "../types";
@@ -111,31 +119,9 @@ const ProfileForm = ({
   const { isDirty } = useFormState();
   const dataProvider = useDataProvider<CrmDataProvider>();
 
-  const { mutate: updatePassword } = useMutation({
-    mutationKey: ["updatePassword"],
-    mutationFn: async () => {
-      if (!identity) {
-        throw new Error(
-          translate("crm.profile.record_not_found", {
-            _: "Record not found",
-          }),
-        );
-      }
-      return dataProvider.updatePassword(identity.id);
-    },
-    onSuccess: () => {
-      notify("crm.profile.password_reset_sent", {
-        messageArgs: {
-          _: "A reset password email has been sent to your email address",
-        },
-      });
-    },
-    onError: (e) => {
-      notify(`${e}`, {
-        type: "error",
-      });
-    },
-  });
+  // Atomic mandaba un correo de Supabase para cambiar la clave. En FRIDAY se
+  // cambia aquí mismo, pidiendo la actual.
+  const [cambiandoClave, setCambiandoClave] = useState(false);
 
   const { mutate: mutateSale } = useMutation({
     mutationKey: ["signup"],
@@ -169,7 +155,7 @@ const ProfileForm = ({
   if (!identity) return null;
 
   const handleClickOpenPasswordChange = () => {
-    updatePassword();
+    setCambiandoClave(true);
   };
 
   const handleAvatarUpdate = async (values: any) => {
@@ -178,6 +164,22 @@ const ProfileForm = ({
 
   return (
     <div className="space-y-4">
+      <Dialog open={cambiandoClave} onOpenChange={setCambiandoClave}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar clave</DialogTitle>
+            <DialogDescription>
+              Se cerrarán tus sesiones en otros dispositivos.
+            </DialogDescription>
+          </DialogHeader>
+          <CambiarClave
+            onHecho={() => {
+              setCambiandoClave(false);
+              notify("Clave cambiada.");
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardContent>
           <div className="mb-4 flex flex-row justify-between">

@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ContableGuard } from './contable.guard';
+import { Publico } from '../auth/publico.decorator';
 import { ContableService } from './contable.service';
 
 /**
@@ -25,6 +26,7 @@ import { ContableService } from './contable.service';
  * viven en el otro controlador, sin llave: son sólo lectura y ya están detrás
  * de la misma puerta que el resto del CRM.
  */
+@Publico()
 @Controller('crm/contable')
 @UseGuards(ContableGuard)
 export class ContableController {
