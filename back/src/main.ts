@@ -10,11 +10,24 @@ import { ValidationPipe } from '@nestjs/common';
  * de estos dos valores: hasta ahora el origen estaba escrito en el código y
  * `CORS_ORIGIN` existía en el `.env` sin que nadie la leyera, así que cambiarla
  * allí no hacía nada.
+ *
+ * Un origen con `*` en el puerto —`http://localhost:*`— vale para cualquier
+ * puerto de esa máquina. Es para desarrollo: cuando el 3002 está ocupado, Vite
+ * levanta el CRM en el 3003, y sin esto ese CRM no puede hablar con el back
+ * de siempre y acaba arrancando un segundo back sólo para probar. Sólo se
+ * acepta el comodín en el puerto, nunca en el host: `http://*` abriría el API
+ * a cualquier página.
  */
-const ORIGENES = (process.env.CORS_ORIGIN ?? 'http://localhost:3000,http://localhost:3002')
+const ORIGENES: (string | RegExp)[] = (
+  process.env.CORS_ORIGIN ?? 'http://localhost:3000,http://localhost:3002'
+)
   .split(',')
   .map((o) => o.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((o) => {
+    const comodin = /^(https?:\/\/[^/:*]+):\*$/.exec(o);
+    return comodin ? new RegExp(`^${comodin[1].replace(/\./g, '\\.')}:\\d+$`) : o;
+  });
 
 async function bootstrap() {
   // `rawBody` conserva el cuerpo sin interpretar además del objeto ya
