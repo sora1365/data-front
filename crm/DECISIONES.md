@@ -543,3 +543,23 @@ una.
 Los clientes se ordenan por lo que facturan. No porque los demás no importen:
 la siguiente venta a quien ya gasta diez mil es más probable y más grande que
 la de quien gastó cien.
+
+## Soporte: tickets con plazo
+
+Una queja llegaba por WhatsApp o por teléfono, alguien decía «lo miro» y
+quedaba en su cabeza: nadie sabía cuántas solicitudes había abiertas ni cuál
+llevaba tres días sin respuesta. El ticket es la unidad que permite contestarlo.
+
+- **El plazo se promete por prioridad y se copia al ticket**, para que cambiar
+  la política no reescriba el cumplimiento del mes pasado.
+- **Esperar al cliente para el reloj**: si no, el indicador castiga al equipo
+  por lo que tarda el cliente.
+- **Quejas y reclamos nacen en alta**, y el formulario público no deja elegir
+  prioridad.
+- **Sin responsable, el que lleva la cuenta**: un ticket sin dueño no lo mira
+  nadie.
+- **La encuesta la manda una persona**, no el sistema al resolver.
+
+La pantalla sólo existe en escritorio: la versión móvil del CRM no tiene
+ninguna de las pantallas de FRIDAY (agenda, postventa, soporte…), sólo las de
+Atomic. Detalles en `back/src/modules/crm/tickets/README.md`.

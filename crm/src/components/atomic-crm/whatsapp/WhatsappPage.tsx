@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNotify } from "ra-core";
+import { useNavigate } from "react-router";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   type Mensaje,
   type Plantilla,
 } from "../providers/friday/whatsapp";
+import { ticketDesdeWhatsapp } from "../providers/friday/tickets";
 
 /** Cada cuánto se refresca la bandeja mientras está abierta. */
 const REFRESCO_MS = 15_000;
@@ -31,6 +33,7 @@ const REFRESCO_MS = 15_000;
  */
 export const WhatsappPage = () => {
   const notify = useNotify();
+  const navigate = useNavigate();
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [abierta, setAbierta] = useState<
     (Conversacion & { mensajes: Mensaje[] }) | null
@@ -184,11 +187,31 @@ export const WhatsappPage = () => {
                       {abierta.telefono} · por {abierta.canal_nombre}
                     </p>
                   </div>
-                  <Badge variant={abierta.ventana.abierta ? "default" : "outline"}>
-                    {abierta.ventana.abierta
-                      ? `Ventana abierta · ${restanteEnPalabras(abierta.ventana)}`
-                      : "Ventana cerrada"}
-                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Cuando lo que escribe el cliente es un problema y no una
+                        venta: el ticket hereda el contacto, la empresa y lo
+                        último que dijo, y la conversación no se toca. */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const { id, yaExistia } = await ticketDesdeWhatsapp(abierta.id);
+                          if (yaExistia) notify(`Esta conversación ya tiene el ticket #${id} abierto.`);
+                          navigate(`/tickets?id=${id}`);
+                        } catch (e: any) {
+                          notify(e.message, { type: "error" });
+                        }
+                      }}
+                    >
+                      Crear ticket
+                    </Button>
+                    <Badge variant={abierta.ventana.abierta ? "default" : "outline"}>
+                      {abierta.ventana.abierta
+                        ? `Ventana abierta · ${restanteEnPalabras(abierta.ventana)}`
+                        : "Ventana cerrada"}
+                    </Badge>
+                  </div>
                 </header>
 
                 <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto p-1">

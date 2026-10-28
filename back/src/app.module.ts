@@ -20,6 +20,7 @@ import { AgendaModule } from './modules/crm/agenda/agenda.module';
 import { CampaniasModule } from './modules/crm/campanias/campanias.module';
 import { LeadsModule } from './modules/crm/leads/leads.module';
 import { PautaModule } from './modules/crm/pauta/pauta.module';
+import { TicketsModule } from './modules/crm/tickets/tickets.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -64,6 +65,7 @@ import { databaseSslConfig } from './database/database-ssl';
     CampaniasModule,
     LeadsModule,
     PautaModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

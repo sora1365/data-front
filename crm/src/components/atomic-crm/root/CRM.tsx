@@ -67,6 +67,7 @@ import { PautaPage } from "../pauta/PautaPage";
 import { TablerosPage } from "../tableros/TablerosPage";
 import { PreciosPage } from "../precios/PreciosPage";
 import { PostventaPage } from "../postventa/PostventaPage";
+import { TicketsPage } from "../tickets/TicketsPage";
 import { ListasPage } from "../listas/ListasPage";
 import { SeguimientoPage } from "../seguimiento/SeguimientoPage";
 
@@ -286,6 +287,7 @@ const DesktopAdmin = (
         <Route path={SeguimientoPage.path} element={<SeguimientoPage />} />
         <Route path={PreciosPage.path} element={<PreciosPage />} />
         <Route path={PostventaPage.path} element={<PostventaPage />} />
+        <Route path={TicketsPage.path} element={<TicketsPage />} />
         <Route path={ListasPage.path} element={<ListasPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />
