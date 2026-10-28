@@ -580,3 +580,21 @@ quién lo pidió, el modelo y lo que costó.
   lead; la temperatura, cuántas ganas tiene de comprar, y la pone una persona.
 
 Detalles en `back/src/modules/crm/ia/README.md`.
+
+## Duplicados: encontrarlos y juntarlos
+
+Un cliente en dos fichas es un historial partido en dos. Entran por todos
+lados —un lead que no se reconoció, una importación, «Cía. Ltda.» frente a
+«CIA LTDA»—, así que además de avisar al crear hace falta encontrarlos después:
+menú de usuario → Duplicados.
+
+- **Se fusiona en el servidor y en una transacción**, moviendo todo lo que
+  apunta a la ficha según el catálogo de Postgres, no según una lista escrita a
+  mano que se queda vieja.
+- **No se pisa nada del ganador**; se rellenan sus huecos.
+- **Dos empresas con oportunidades abiertas del mismo producto no se juntan**
+  hasta cerrar una, y dos enlazadas a RUC distintos del padrón, nunca.
+- **La ficha borrada queda guardada** con lo que se movió, y lo marcado como
+  «no son la misma» no se vuelve a proponer.
+
+Detalles en `back/src/modules/crm/duplicados/README.md`.

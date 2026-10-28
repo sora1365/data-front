@@ -68,16 +68,24 @@ export const translateContactGenderLabel = (
     _: contactGenderDefaultLabels[gender.value] ?? gender.label,
   });
 
+/**
+ * Un correo o teléfono que llega sin `type` —de una importación, de un lead,
+ * de una fusión con un contacto antiguo— se enseña como «Otro». Sin esta
+ * guarda, la ficha entera se caía con «Something went wrong» por un dato
+ * opcional.
+ */
 export const translatePersonalInfoTypeLabel = (
-  type: string,
+  type: string | null | undefined,
   translate: TranslateFn,
-) =>
-  translate(
-    `resources.contacts.inputs.personal_info_types.${personalInfoTypeMap[type] ?? type.toLowerCase()}`,
+) => {
+  const tipo = type || "Other";
+  return translate(
+    `resources.contacts.inputs.personal_info_types.${personalInfoTypeMap[tipo] ?? tipo.toLowerCase()}`,
     {
-      _: type,
+      _: tipo,
     },
   );
+};
 
 /**
  * Folds a long line according to vCard specification (max 75 chars per line)

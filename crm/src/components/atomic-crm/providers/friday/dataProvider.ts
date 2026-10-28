@@ -317,8 +317,26 @@ export const dataProvider = {
     throw new Error("FRIDAY todavía no tiene contraseñas que cambiar.");
   },
 
-  async mergeContacts(_: Identifier, __: Identifier): Promise<Contact> {
-    throw new Error("Fusionar contactos todavía no está disponible.");
+  /**
+   * Fusionar dos contactos, en el servidor y de una vez.
+   *
+   * Atomic lo hacía desde aquí con una petición por tarea, por nota y por
+   * oportunidad; si una fallaba a medias, el contacto quedaba repartido entre
+   * dos fichas. El servidor lo hace en una transacción y mueve también lo que
+   * Atomic no conocía: conversaciones, eventos, tickets, leads.
+   */
+  async mergeContacts(perdedor: Identifier, ganador: Identifier): Promise<Contact> {
+    const respuesta = await fetch(`${API}/crm/duplicados/contacto/fusionar`, {
+      method: "POST",
+      headers: cabeceras(),
+      body: JSON.stringify({ ganador: Number(ganador), perdedor: Number(perdedor) }),
+    });
+    if (!respuesta.ok) {
+      const cuerpo = await respuesta.json().catch(() => ({}));
+      throw new Error(cuerpo?.message ?? `${respuesta.status} ${respuesta.statusText}`);
+    }
+    const { data } = await this.getOne("contacts", { id: ganador });
+    return data as Contact;
   },
 };
 

@@ -1,4 +1,4 @@
-import { FileText, Import, Settings, User, Users } from "lucide-react";
+import { CopyCheck, FileText, Import, Settings, User, Users } from "lucide-react";
 import { CanAccess, useTranslate, useUserMenu } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -8,6 +8,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { ImportPage } from "../misc/ImportPage";
+import { DuplicadosPage } from "../duplicados/DuplicadosPage";
 import { ChangelogPage } from "../misc/ChangelogPage";
 import { GlobalSearchButton } from "../search/GlobalSearchButton";
 
@@ -156,6 +157,7 @@ const Header = () => {
                     <SettingsMenu />
                   </CanAccess>
                   <ImportFromJsonMenuItem />
+                  <DuplicadosMenuItem />
                   <ChangelogMenuItem />
                 </UserMenu>
               </div>
@@ -247,6 +249,25 @@ const ImportFromJsonMenuItem = () => {
       <Link to={ImportPage.path} className="flex items-center gap-2">
         <Import />
         {translate("crm.header.import_data")}
+      </Link>
+    </DropdownMenuItem>
+  );
+};
+
+/**
+ * En el menú y no en la barra: es mantenimiento de datos, como importar, y se
+ * revisa de vez en cuando —sobre todo después de una importación—, no a diario.
+ */
+const DuplicadosMenuItem = () => {
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<DuplicadosMenuItem> must be used inside <UserMenu>");
+  }
+  return (
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to={DuplicadosPage.path} className="flex items-center gap-2">
+        <CopyCheck />
+        Duplicados
       </Link>
     </DropdownMenuItem>
   );
