@@ -30,6 +30,7 @@ export class TablerosController {
     @Query('hasta') hasta: string,
     @Query('marca') marca?: string,
     @Query('comercial') comercial?: string,
+    @Query('equipo') equipo?: string,
   ) {
     if (!desde || !hasta) {
       throw new BadRequestException('Hacen falta «desde» y «hasta».');
@@ -40,7 +41,13 @@ export class TablerosController {
     if (Date.parse(hasta) <= Date.parse(desde)) {
       throw new BadRequestException('El periodo termina antes de empezar.');
     }
-    return this.tableros.resumen({ desde, hasta, marca, comercial });
+    return this.tableros.resumen({
+      desde,
+      hasta,
+      marca: marca || undefined,
+      comercial: comercial || undefined,
+      equipo: equipo || undefined,
+    });
   }
 
   // ----------------------------------------------------- metas y comisiones

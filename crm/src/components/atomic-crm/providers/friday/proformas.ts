@@ -12,13 +12,26 @@ export interface LineaDeProforma {
   precio_unitario: number;
   descuento_pct: number;
   iva_pct: number;
+  /** Una opción que el cliente puede añadir al aceptar. */
+  opcional?: boolean;
+  incluida?: boolean | null;
+}
+
+export type NivelDeDescuento = "libre" | "supervisor" | "direccion";
+
+export interface Aprobacion {
+  descuento_pct: number;
+  nivel: NivelDeDescuento;
+  pendiente: NivelDeDescuento | null;
 }
 
 export interface Proforma {
   id: string;
   numero: string;
+  version: number;
+  version_de: string | null;
   oportunidad: string;
-  estado: "borrador" | "enviada" | "aceptada" | "rechazada" | "anulada";
+  estado: "borrador" | "enviada" | "aceptada" | "rechazada" | "anulada" | "reemplazada";
   estado_visible: Proforma["estado"] | "vencida";
   valida_hasta: string;
   razon_social: string;
@@ -38,7 +51,48 @@ export interface Proforma {
   cerrada_en: string | null;
   aceptada_por: string | null;
   motivo: string | null;
+  motivo_rechazo: string | null;
+  condiciones_pago: string | null;
+  plantilla: string | null;
+  canal_envio: string | null;
+  aprobada_por: string | null;
+  aprobacion_pedida_en: string | null;
+  creada_por: string;
+  aprobacion: Aprobacion;
   lineas: LineaDeProforma[];
+}
+
+/** Una fila del listado de propuestas: sin líneas, con la venta al lado. */
+export type PropuestaListada = Omit<Proforma, "lineas"> & {
+  oportunidad_nombre: string;
+  comercial: string | null;
+  marca: string | null;
+  puedes_aprobar?: boolean;
+  motivo?: string | null;
+};
+
+export interface PlantillaDePropuesta {
+  codigo: string;
+  nombre: string;
+  marca: string | null;
+  dias_validez: number;
+  notas: string | null;
+  condiciones: string | null;
+  condiciones_pago: string | null;
+  activa: boolean;
+}
+
+export interface EventoDePropuesta {
+  id: string;
+  tipo: string;
+  detalle: string | null;
+  autor: string;
+  ocurrido_en: string;
+}
+
+export interface TopeDeDescuento {
+  nivel: NivelDeDescuento;
+  hasta_pct: number;
 }
 
 export interface PrecioDeProducto {
@@ -75,16 +129,59 @@ async function pedir(ruta: string, opciones: RequestInit = {}) {
 export const proformasDe = (oportunidad: string | number): Promise<Proforma[]> =>
   pedir(`/oportunidad/${oportunidad}`);
 
-export const crearProforma = (oportunidad: string | number): Promise<Proforma> =>
-  pedir("", { method: "POST", body: JSON.stringify({ oportunidad: Number(oportunidad) }) });
+export const crearProforma = (
+  oportunidad: string | number,
+  plantilla?: string,
+): Promise<Proforma> =>
+  pedir("", {
+    method: "POST",
+    body: JSON.stringify({ oportunidad: Number(oportunidad), plantilla: plantilla || undefined }),
+  });
+
+export const nuevaVersion = (id: string): Promise<Proforma> =>
+  pedir(`/${id}/version`, { method: "POST" });
+
+export const pedirAprobacion = (id: string): Promise<Proforma> =>
+  pedir(`/${id}/pedir-aprobacion`, { method: "POST" });
+
+export const aprobarDescuento = (id: string): Promise<Proforma> =>
+  pedir(`/${id}/aprobar`, { method: "POST" });
+
+export const eventosDe = (id: string): Promise<EventoDePropuesta[]> => pedir(`/${id}/eventos`);
+
+export const listadoDePropuestas = (
+  filtros: { estado?: string; comercial?: string; marca?: string } = {},
+): Promise<PropuestaListada[]> => {
+  const busca = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(filtros)) if (valor) busca.set(clave, valor);
+  return pedir(busca.size ? `?${busca}` : "");
+};
+
+export const aprobacionesPendientes = (): Promise<PropuestaListada[]> => pedir("/aprobaciones");
+
+export const plantillasDePropuesta = (): Promise<PlantillaDePropuesta[]> => pedir("/plantillas");
+
+export const guardarPlantilla = (datos: Partial<PlantillaDePropuesta>) =>
+  pedir("/plantillas", { method: "POST", body: JSON.stringify(datos) });
+
+export const topesDeDescuento = (): Promise<TopeDeDescuento[]> => pedir("/descuentos");
+
+export const ponerTope = (nivel: NivelDeDescuento, hasta_pct: number): Promise<TopeDeDescuento[]> =>
+  pedir("/descuentos", { method: "POST", body: JSON.stringify({ nivel, hasta_pct }) });
+
+export const motivosDeRechazo = (): Promise<{ codigo: string; nombre: string }[]> =>
+  pedir("/motivos");
 
 export const editarProforma = (
   id: string,
   datos: Record<string, unknown>,
 ): Promise<Proforma> => pedir(`/${id}`, { method: "PATCH", body: JSON.stringify(datos) });
 
-export const enviarProforma = (id: string): Promise<Proforma & { enlace: string; simulado: boolean }> =>
-  pedir(`/${id}/enviar`, { method: "POST" });
+export const enviarProforma = (
+  id: string,
+  canal: "correo" | "whatsapp" = "correo",
+): Promise<Proforma & { enlace: string; enlace_whatsapp: string | null; simulado: boolean }> =>
+  pedir(`/${id}/enviar`, { method: "POST", body: JSON.stringify({ canal }) });
 
 export const anularProforma = (id: string, motivo: string): Promise<Proforma> =>
   pedir(`/${id}/anular`, { method: "POST", body: JSON.stringify({ motivo }) });
@@ -112,6 +209,8 @@ export function totalesDe(lineas: LineaDeProforma[]) {
   let total = 0;
 
   for (const l of lineas) {
+    // Las opcionales no suman hasta que el cliente las elige.
+    if (l.opcional && l.incluida !== true) continue;
     const bruto = centimos(Number(l.cantidad || 0) * Number(l.precio_unitario || 0));
     const desc = centimos((bruto * Number(l.descuento_pct || 0)) / 100);
     const base = centimos(bruto - desc);
@@ -138,4 +237,38 @@ export const NOMBRE_DE_ESTADO: Record<string, string> = {
   aceptada: "Aceptada",
   rechazada: "Rechazada",
   anulada: "Anulada",
+  reemplazada: "Reemplazada",
 };
+
+export const NOMBRE_DE_NIVEL: Record<NivelDeDescuento, string> = {
+  libre: "nadie",
+  supervisor: "su supervisor",
+  direccion: "dirección",
+};
+
+/** Los motivos de rechazo, iguales que en el servidor, para leerlos sin pedirlos. */
+export const NOMBRE_DE_MOTIVO: Record<string, string> = {
+  precio: "El precio",
+  competencia: "Eligió a otro proveedor",
+  presupuesto: "No tiene presupuesto ahora",
+  alcance: "No es lo que necesita",
+  plazo: "Los plazos no le sirven",
+  pospuesto: "Lo deja para más adelante",
+  otro: "Otro motivo",
+};
+
+export const NOMBRE_DE_EVENTO: Record<string, string> = {
+  creada: "Creada",
+  editada: "Editada",
+  version: "Versión nueva",
+  aprobacion_pedida: "Pidió firma del descuento",
+  aprobada: "Descuento firmado",
+  enviada: "Enviada",
+  vista: "El cliente la abrió",
+  aceptada: "Aceptada",
+  rechazada: "Rechazada",
+  anulada: "Anulada",
+};
+
+/** La versión para imprimir del enlace del cliente: es el PDF. */
+export const pdfDeProforma = (token: string) => `${enlaceDeProforma(token)}?imprimir`;

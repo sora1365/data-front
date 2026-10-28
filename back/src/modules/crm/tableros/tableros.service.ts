@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { sqlEquipo } from './analitica.service';
 import { conResto, embudo, tasaDeCierre } from './tableros.reglas';
 
 export interface Periodo {
@@ -8,6 +9,8 @@ export interface Periodo {
   hasta: string;
   marca?: string;
   comercial?: string;
+  /** Un supervisor: él y todos los que cuelgan de él. */
+  equipo?: string;
 }
 
 /**
@@ -45,6 +48,10 @@ export class TablerosService {
       tasaDeCierre: tasaDeCierre(cierres.ganadas, cierres.perdidas),
       diasHastaGanar: cierres.diasHastaGanar,
       vendido: ventas.total,
+      ventas: ventas.cuenta,
+      // Sobre las ventas del periodo y no sobre las oportunidades ganadas: es
+      // lo que se facturó, y una venta anulada no es un ticket.
+      ticketPromedio: ventas.cuenta ? Math.round((ventas.total / ventas.cuenta) * 100) / 100 : null,
       porProducto: conResto(await this.porProducto(periodo)),
       porMarca: conResto(await this.porMarca(periodo)),
       porOrigen: conResto(await this.porOrigen(periodo)),
@@ -90,9 +97,12 @@ export class TablerosService {
   private async cierres(p: Periodo) {
     const { where, params } = this.filtro(p, 'h.ocurrido_en');
     const filas = await this.dataSource.query(
+      // Oportunidades distintas y no asientos: una tarjeta que sale de
+      // «ganada» y vuelve a entrar deja dos asientos, y contando filas el
+      // tablero enseñaba más ganadas que ventas.
       `SELECT
-         count(*) FILTER (WHERE e.es_ganada)::int AS ganadas,
-         count(*) FILTER (WHERE e.es_perdida)::int AS perdidas,
+         count(DISTINCT h.oportunidad) FILTER (WHERE e.es_ganada)::int AS ganadas,
+         count(DISTINCT h.oportunidad) FILTER (WHERE e.es_perdida)::int AS perdidas,
          avg(extract(epoch FROM h.ocurrido_en - o.creada_en) / 86400)
            FILTER (WHERE e.es_ganada) AS dias
          FROM crm.oportunidad_etapa h
@@ -119,6 +129,10 @@ export class TablerosService {
     if (p.comercial) {
       params.push(p.comercial);
       extra += ` AND v.comercial = $${params.length}`;
+    }
+    if (p.equipo) {
+      params.push(p.equipo);
+      extra += ` AND v.comercial IN ${sqlEquipo(params.length)}`;
     }
     const filas = await this.dataSource.query(
       `SELECT coalesce(sum(v.monto), 0)::float8 AS total, count(*)::int AS cuenta
@@ -198,6 +212,10 @@ export class TablerosService {
     if (p.comercial) {
       params.push(p.comercial);
       partes.push(`o.comercial = $${params.length}`);
+    }
+    if (p.equipo) {
+      params.push(p.equipo);
+      partes.push(`o.comercial IN ${sqlEquipo(params.length)}`);
     }
     // Las archivadas se quedan fuera: se archiva lo que se abrió por error o
     // por duplicado, y contarlo hundiría la conversión con ventas que nunca

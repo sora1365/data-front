@@ -66,6 +66,7 @@ import { LeadsPage } from "../leads/LeadsPage";
 import { PautaPage } from "../pauta/PautaPage";
 import { TablerosPage } from "../tableros/TablerosPage";
 import { PreciosPage } from "../precios/PreciosPage";
+import { PropuestasPage } from "../propuestas/PropuestasPage";
 import { PostventaPage } from "../postventa/PostventaPage";
 import { TicketsPage } from "../tickets/TicketsPage";
 import { DuplicadosPage } from "../duplicados/DuplicadosPage";
@@ -287,6 +288,7 @@ const DesktopAdmin = (
         <Route path={TablerosPage.path} element={<TablerosPage />} />
         <Route path={SeguimientoPage.path} element={<SeguimientoPage />} />
         <Route path={PreciosPage.path} element={<PreciosPage />} />
+        <Route path={PropuestasPage.path} element={<PropuestasPage />} />
         <Route path={PostventaPage.path} element={<PostventaPage />} />
         <Route path={TicketsPage.path} element={<TicketsPage />} />
         <Route path={DuplicadosPage.path} element={<DuplicadosPage />} />

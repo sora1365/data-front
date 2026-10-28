@@ -1,12 +1,21 @@
 import {
+  cadenaDeSupervisores,
   calcularTotales,
+  descuentoMayor,
+  esMotivoDeRechazo,
   estadoVisible,
   estaVencida,
+  firmaVigente,
+  nivelRequerido,
   numeroDeProforma,
+  numeroDeVersion,
   problemasParaEnviar,
+  puedeAprobar,
   sePuedeEditar,
   sePuedeEnviar,
   sePuedeResponder,
+  sePuedeVersionar,
+  telefonoParaWhatsapp,
 } from './proformas.reglas';
 
 const linea = (extra: Partial<Parameters<typeof calcularTotales>[0][0]> = {}) => ({
@@ -152,5 +161,139 @@ describe('problemasParaEnviar', () => {
     expect(problemasParaEnviar({ ...buena, valida_hasta: '2026-10-01' }, '2026-10-22')).toEqual([
       'La fecha de validez ya pasó: ponle una nueva antes de enviarla.',
     ]);
+  });
+});
+
+// ------------------------------------------------- propuestas: negociación
+
+describe('líneas opcionales', () => {
+  it('una opcional sin contestar no suma', () => {
+    const t = calcularTotales([linea(), linea({ precio_unitario: 400, opcional: true })]);
+    expect(t.subtotal).toBe(1000);
+    expect(t.total).toBe(1150);
+  });
+
+  it('suma cuando el cliente la elige, y no cuando la descarta', () => {
+    const elegida = calcularTotales([
+      linea(),
+      linea({ precio_unitario: 400, opcional: true, incluida: true }),
+    ]);
+    expect(elegida.subtotal).toBe(1400);
+
+    const descartada = calcularTotales([
+      linea(),
+      linea({ precio_unitario: 400, opcional: true, incluida: false }),
+    ]);
+    expect(descartada.subtotal).toBe(1000);
+  });
+});
+
+describe('versiones', () => {
+  it('la primera conserva el número; las siguientes llevan sufijo', () => {
+    expect(numeroDeVersion('P-2026-0007', 1)).toBe('P-2026-0007');
+    expect(numeroDeVersion('P-2026-0007', 2)).toBe('P-2026-0007-v2');
+  });
+
+  it('versionar una versión no apila sufijos', () => {
+    expect(numeroDeVersion('P-2026-0007-v2', 3)).toBe('P-2026-0007-v3');
+  });
+
+  it('sólo se versiona lo que el cliente tiene en la mano', () => {
+    expect(sePuedeVersionar('enviada')).toBe(true);
+    expect(sePuedeVersionar('rechazada')).toBe(true);
+    expect(sePuedeVersionar('borrador')).toBe(false);
+    expect(sePuedeVersionar('aceptada')).toBe(false);
+    expect(sePuedeVersionar('anulada')).toBe(false);
+    expect(sePuedeVersionar('reemplazada')).toBe(false);
+  });
+
+  it('una reemplazada no admite respuesta del cliente', () => {
+    expect(sePuedeResponder('reemplazada')).toBe(false);
+  });
+});
+
+describe('motivos de rechazo', () => {
+  it('sólo los de la lista', () => {
+    expect(esMotivoDeRechazo('precio')).toBe(true);
+    expect(esMotivoDeRechazo('caro')).toBe(false);
+    expect(esMotivoDeRechazo('toString')).toBe(false);
+  });
+});
+
+describe('aprobación de descuentos', () => {
+  const topes = [
+    { nivel: 'libre' as const, hasta_pct: 10 },
+    { nivel: 'supervisor' as const, hasta_pct: 25 },
+    { nivel: 'direccion' as const, hasta_pct: 100 },
+  ];
+
+  it('cuenta el mayor descuento de línea, no el medio', () => {
+    expect(descuentoMayor([linea({ descuento_pct: 5 }), linea({ descuento_pct: 60 })])).toBe(60);
+  });
+
+  it('cada tope incluye su límite', () => {
+    expect(nivelRequerido(0, topes)).toBe('libre');
+    expect(nivelRequerido(10, topes)).toBe('libre');
+    expect(nivelRequerido(10.5, topes)).toBe('supervisor');
+    expect(nivelRequerido(25, topes)).toBe('supervisor');
+    expect(nivelRequerido(40, topes)).toBe('direccion');
+  });
+
+  it('por encima de todos los topes firma dirección', () => {
+    expect(nivelRequerido(50, [{ nivel: 'libre', hasta_pct: 10 }])).toBe('direccion');
+  });
+
+  it('una firma cubre bajar el descuento, no subirlo', () => {
+    expect(firmaVigente(20, 20)).toBe(true);
+    expect(firmaVigente(15, 20)).toBe(true);
+    expect(firmaVigente(22, 20)).toBe(false);
+    expect(firmaVigente(5, null)).toBe(false);
+  });
+
+  const supervisorDe = new Map<string, string | null>([
+    ['ana', 'beto'],
+    ['beto', 'carla'],
+    ['carla', null],
+  ]);
+
+  it('la cadena va del más cercano al más alto', () => {
+    expect(cadenaDeSupervisores('ana', supervisorDe)).toEqual(['beto', 'carla']);
+    expect(cadenaDeSupervisores('carla', supervisorDe)).toEqual([]);
+  });
+
+  it('un círculo no cuelga la cadena', () => {
+    const circulo = new Map<string, string | null>([['x', 'y'], ['y', 'x']]);
+    expect(cadenaDeSupervisores('x', circulo)).toEqual(['y']);
+  });
+
+  it('nivel supervisor: cualquiera por encima, nunca uno mismo', () => {
+    const cadena = ['beto', 'carla'];
+    expect(puedeAprobar('supervisor', 'ana', 'beto', cadena).permitido).toBe(true);
+    expect(puedeAprobar('supervisor', 'ana', 'carla', cadena).permitido).toBe(true);
+    expect(puedeAprobar('supervisor', 'ana', 'ana', cadena).permitido).toBe(false);
+    expect(puedeAprobar('supervisor', 'ana', 'diego', cadena).permitido).toBe(false);
+  });
+
+  it('nivel dirección: sólo la cima', () => {
+    const cadena = ['beto', 'carla'];
+    expect(puedeAprobar('direccion', 'ana', 'carla', cadena).permitido).toBe(true);
+    expect(puedeAprobar('direccion', 'ana', 'beto', cadena).permitido).toBe(false);
+  });
+
+  it('quien no responde a nadie firma lo suyo', () => {
+    expect(puedeAprobar('direccion', 'carla', 'carla', []).permitido).toBe(true);
+    expect(puedeAprobar('direccion', 'carla', 'beto', []).permitido).toBe(false);
+  });
+});
+
+describe('teléfono para WhatsApp', () => {
+  it('cambia el cero local por el 593', () => {
+    expect(telefonoParaWhatsapp('099 123 4567')).toBe('593991234567');
+    expect(telefonoParaWhatsapp('+593 99 123 4567')).toBe('593991234567');
+  });
+
+  it('sin número utilizable, nada', () => {
+    expect(telefonoParaWhatsapp('')).toBeNull();
+    expect(telefonoParaWhatsapp('ext. 12')).toBeNull();
   });
 });

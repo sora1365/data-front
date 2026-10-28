@@ -1,29 +1,175 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { catalogosCrm, type CatalogosCrm } from "../providers/friday/leads";
+import { AlertasDelTablero } from "./AlertasDelTablero";
+import { Cifra } from "./Cifra";
 import { MetasYComisiones } from "./MetasYComisiones";
+import { PipelineVista } from "./PipelineVista";
+import { ProductividadVista } from "./ProductividadVista";
+import { PronosticoVista } from "./PronosticoVista";
+import { ReportesVista } from "./ReportesVista";
+import { TendenciaVista } from "./TendenciaVista";
 import {
   dinero,
+  equipos as pedirEquipos,
   periodosHabituales,
   resumenDeTableros,
+  type FiltrosDeTablero,
   type FilaDeDesglose,
+  type MiembroDeEquipo,
   type Resumen,
 } from "../providers/friday/tableros";
 
 /**
  * Los números del CRM.
  *
- * Contesta tres cosas y no veinte: por dónde se caen las ventas (el embudo),
- * qué se vendió y de dónde salió. Un tablero que lo enseña todo no se mira,
- * porque mirarlo entero cuesta más que abrir el tablero de tarjetas.
+ * El resumen contesta tres cosas y no veinte: por dónde se caen las ventas
+ * (el embudo), qué se vendió y de dónde salió. Lo demás va en pestañas
+ * aparte, cada una con una pregunta: qué viene, dónde se atasca, quién mueve
+ * qué, cómo va respecto a antes, y lo que cada quien quiera armar.
  *
- * Todo cuelga de un periodo, y el periodo se elige arriba: un número sin
- * periodo —«23 ganadas»— no significa nada, y es la forma más fácil de que
- * dos personas discutan con dos cifras distintas que las dos son ciertas.
+ * Los filtros van arriba y valen para todas las pestañas: mirar el
+ * pronóstico de una marca con el embudo de todas es comparar dos cosas
+ * distintas sin darse cuenta.
  */
 export const TablerosPage = () => {
   const periodos = useMemo(() => periodosHabituales(), []);
   const [periodo, setPeriodo] = useState(periodos[0]);
+  const [filtros, setFiltros] = useState<FiltrosDeTablero>({});
+  const [catalogos, setCatalogos] = useState<CatalogosCrm | null>(null);
+  const [miembros, setMiembros] = useState<MiembroDeEquipo[]>([]);
+  const [pestana, setPestana] = useState("resumen");
+
+  useEffect(() => {
+    catalogosCrm().then(setCatalogos).catch(() => setCatalogos(null));
+    pedirEquipos().then(setMiembros).catch(() => setMiembros([]));
+  }, []);
+
+  // Un equipo es alguien que supervisa a otros: quien no tiene a nadie
+  // debajo no encabeza nada, y ofrecerlo sería un filtro idéntico al de
+  // comercial.
+  const supervisores = miembros.filter((m) => miembros.some((x) => x.supervisor === m.usuario));
+
+  const conPeriodo = ["resumen", "productividad"].includes(pestana);
+
+  return (
+    <div className="flex flex-col gap-4 p-1 tableros">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">Tableros</h1>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Selector
+            etiqueta="Marca"
+            valor={filtros.marca}
+            opciones={(catalogos?.marcas ?? []).map((m) => [m.codigo, m.nombre])}
+            alCambiar={(marca) => setFiltros((f) => ({ ...f, marca }))}
+          />
+          <Selector
+            etiqueta="Comercial"
+            valor={filtros.comercial}
+            opciones={(catalogos?.comerciales ?? []).map((c) => [c.usuario, c.nombre || c.usuario])}
+            alCambiar={(comercial) => setFiltros((f) => ({ ...f, comercial }))}
+          />
+          {supervisores.length > 0 && (
+            <Selector
+              etiqueta="Equipo"
+              valor={filtros.equipo}
+              opciones={supervisores.map((s) => [s.usuario, `Equipo de ${s.nombre}`])}
+              alCambiar={(equipo) => setFiltros((f) => ({ ...f, equipo }))}
+            />
+          )}
+          <Button size="sm" variant="ghost" onClick={() => window.print()}>
+            PDF
+          </Button>
+        </div>
+      </header>
+
+      <Tabs value={pestana} onValueChange={setPestana}>
+        <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            <TabsTrigger value="pronostico">Pronóstico</TabsTrigger>
+            <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+            <TabsTrigger value="productividad">Productividad</TabsTrigger>
+            <TabsTrigger value="tendencia">Tendencia</TabsTrigger>
+            <TabsTrigger value="reportes">Reportes</TabsTrigger>
+          </TabsList>
+          {conPeriodo && (
+            <div className="flex flex-wrap items-center gap-2">
+              {periodos.map((p) => (
+                <Button
+                  key={p.codigo}
+                  size="sm"
+                  variant={p.codigo === periodo.codigo ? "default" : "outline"}
+                  onClick={() => setPeriodo(p)}
+                >
+                  {p.nombre}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <TabsContent value="resumen" className="flex flex-col gap-4 mt-3">
+          <AlertasDelTablero filtros={filtros} />
+          <ResumenDelPeriodo periodo={periodo} filtros={filtros} />
+        </TabsContent>
+        <TabsContent value="pronostico" className="mt-3">
+          <PronosticoVista filtros={filtros} />
+        </TabsContent>
+        <TabsContent value="pipeline" className="mt-3">
+          <PipelineVista filtros={filtros} />
+        </TabsContent>
+        <TabsContent value="productividad" className="mt-3">
+          <ProductividadVista periodo={periodo} filtros={filtros} alCambiarEquipos={setMiembros} />
+        </TabsContent>
+        <TabsContent value="tendencia" className="mt-3">
+          <TendenciaVista filtros={filtros} />
+        </TabsContent>
+        <TabsContent value="reportes" className="mt-3">
+          <ReportesVista filtros={filtros} catalogos={catalogos} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+TablerosPage.path = "/tableros";
+
+const Selector = ({
+  etiqueta,
+  valor,
+  opciones,
+  alCambiar,
+}: {
+  etiqueta: string;
+  valor: string | undefined;
+  opciones: [string, string][];
+  alCambiar: (valor: string | undefined) => void;
+}) => (
+  <select
+    className="h-8 rounded-md border bg-background px-2 text-sm"
+    aria-label={etiqueta}
+    value={valor ?? ""}
+    onChange={(e) => alCambiar(e.target.value || undefined)}
+  >
+    <option value="">{etiqueta}: todas</option>
+    {opciones.map(([codigo, nombre]) => (
+      <option key={codigo} value={codigo}>
+        {nombre}
+      </option>
+    ))}
+  </select>
+);
+
+const ResumenDelPeriodo = ({
+  periodo,
+  filtros,
+}: {
+  periodo: { desde: string; hasta: string };
+  filtros: FiltrosDeTablero;
+}) => {
   const [datos, setDatos] = useState<Resumen | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -31,37 +177,21 @@ export const TablerosPage = () => {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      setDatos(await resumenDeTableros(periodo.desde, periodo.hasta));
+      setDatos(await resumenDeTableros(periodo.desde, periodo.hasta, filtros));
       setError(null);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setCargando(false);
     }
-  }, [periodo]);
+  }, [periodo, filtros]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
   return (
-    <div className="flex flex-col gap-4 p-1">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Tableros</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {periodos.map((p) => (
-            <Button
-              key={p.codigo}
-              size="sm"
-              variant={p.codigo === periodo.codigo ? "default" : "outline"}
-              onClick={() => setPeriodo(p)}
-            >
-              {p.nombre}
-            </Button>
-          ))}
-        </div>
-      </header>
-
+    <>
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -72,7 +202,7 @@ export const TablerosPage = () => {
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : datos ? (
         <>
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-6">
             <Cifra titulo="Abiertas" valor={String(datos.abiertas)} pie="en el periodo" />
             <Cifra titulo="Ganadas" valor={String(datos.ganadas)} pie="cerradas con venta" />
             <Cifra titulo="Perdidas" valor={String(datos.perdidas)} pie="cerradas sin venta" />
@@ -91,6 +221,11 @@ export const TablerosPage = () => {
                   ? "ventas del periodo"
                   : `${datos.diasHastaGanar} días de media hasta ganar`
               }
+            />
+            <Cifra
+              titulo="Ticket promedio"
+              valor={datos.ticketPromedio === null ? "—" : dinero(datos.ticketPromedio)}
+              pie={`${datos.ventas} venta${datos.ventas === 1 ? "" : "s"}`}
             />
           </div>
 
@@ -112,19 +247,9 @@ export const TablerosPage = () => {
           </p>
         </>
       ) : null}
-    </div>
+    </>
   );
 };
-
-TablerosPage.path = "/tableros";
-
-const Cifra = ({ titulo, valor, pie }: { titulo: string; valor: string; pie: string }) => (
-  <div className="border rounded-lg p-3">
-    <p className="text-xs text-muted-foreground">{titulo}</p>
-    <p className="text-2xl font-semibold tabular-nums">{valor}</p>
-    <p className="text-[11px] text-muted-foreground">{pie}</p>
-  </div>
-);
 
 /**
  * El embudo, como barras que se acortan.

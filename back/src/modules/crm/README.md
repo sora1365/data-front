@@ -162,6 +162,46 @@ parada enseñara actividad futura.
 así que sin comprobarlo la conversación queda colgada de otra empresa, donde no
 la encuentra nadie y sin que nada falle.
 
+## Propuestas: la negociación, no sólo el documento
+
+La proforma era el documento; ahora guarda también la negociación
+(`proformas/`, pantalla `/propuestas`). Lo que no se ve:
+
+- **Una enviada no se edita: se versiona.** `P-2026-0007-v2` copia la anterior
+  como borrador; al mandarla, las versiones vivas quedan `reemplazada` y su
+  enlace deja de aceptar. Así el cliente no se queda con el precio viejo.
+- **Las líneas opcionales no suman hasta que el cliente las marca** al aceptar
+  (`incluida`). La venta toma su importe de la proforma aceptada, así que tiene
+  que incluir lo que eligió: se guardan las opciones *antes* de ganar.
+- **El descuento lo firma alguien por encima en la cadena de
+  `crm.comercial.supervisor`**, según los topes de `crm.descuento_nivel`. Es un
+  circuito de firmas con `X-Usuario`, **no un permiso**: el CRM no tiene roles.
+  Se firma el porcentaje; si después se sube, hay que volver a firmar.
+- **Motivo de rechazo de lista cerrada** (`MOTIVOS_DE_RECHAZO`), con el texto
+  del cliente aparte. Con texto libre no se puede contar por qué se pierde.
+- **El PDF es la página del cliente con `?imprimir`.** Un PDF generado en el
+  servidor sería un segundo diseño de la misma proforma.
+- **Por WhatsApp no sale sola**: se abre `wa.me` con el texto puesto. Por la API
+  de Meta haría falta una plantilla aprobada, y casi nunca se está dentro de la
+  ventana de 24 h con un cliente al que se cotiza.
+
+## Analítica: lo que viene, no sólo lo que pasó
+
+`tableros/analitica.*`. Las cuentas están en `analitica.reglas.ts`, puras y
+probadas; el servicio sólo consulta.
+
+- **Pronóstico** por mes de `cierre_estimado`, ponderado por
+  `crm.etapa.probabilidad`. Al lado, la probabilidad **observada** de cada etapa
+  (de lo cerrado en el último año, con mínimo de 10 casos). Las oportunidades con
+  fecha ya pasada **no se arrastran al mes en curso**: van aparte.
+- **Equipo = supervisor y todo lo que cuelga de él**, recursivo (`sqlEquipo`).
+- **Reportes configurables**: dimensión y métricas de una lista blanca; cada
+  métrica es su propia consulta con **su propia fecha** (vendido por `ganada_en`,
+  abiertas por `creada_en`, cobrado por `cobrada_en`) y se juntan por etiqueta.
+- **Reportes programados**: el lunes o el día 1 a las 7:00 de Ecuador, con el
+  periodo anterior completo. Se reservan con un `UPDATE … RETURNING` para que
+  dos procesos no manden el mismo correo. `REPORTES_PROGRAMADOS=no` apaga el reloj.
+
 ## Lo que todavía no está
 
 `/crm/embudo` y la agenda. Y el historial que se llena solo: WhatsApp y correo

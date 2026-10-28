@@ -20,6 +20,8 @@ import { CrmCoincidenciasService } from './crm-coincidencias.service';
 import { CrmService } from './crm.service';
 import { SeguimientoController } from './seguimiento/seguimiento.controller';
 import { SeguimientoService } from './seguimiento/seguimiento.service';
+import { AnaliticaController } from './tableros/analitica.controller';
+import { AnaliticaService } from './tableros/analitica.service';
 import { TablerosController } from './tableros/tableros.controller';
 import { TablerosService } from './tableros/tableros.service';
 import { ComisionesService } from './tableros/comisiones.service';
@@ -31,7 +33,7 @@ import { ComisionesService } from './tableros/comisiones.service';
  */
 @Module({
   imports: [SegmentosModule, CampaniasModule],
-  controllers: [CrmController, CrmRestController, TablerosController, SeguimientoController, ProformasController, CotizadoresController,
+  controllers: [CrmController, CrmRestController, TablerosController, AnaliticaController, SeguimientoController, ProformasController, CotizadoresController,
     ContableController, InventarioController, PostventaController,
     ListasController, GuionesController],
   providers: [
@@ -39,6 +41,7 @@ import { ComisionesService } from './tableros/comisiones.service';
     CrmRestService,
     CrmCoincidenciasService,
     TablerosService,
+    AnaliticaService,
     ComisionesService,
     SeguimientoService,
     ProformasService,
