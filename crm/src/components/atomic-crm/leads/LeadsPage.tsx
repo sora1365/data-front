@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usuarioActual } from "../providers/friday/dataProvider";
+import { PanelIa } from "../ia/PanelIa";
 import {
   anotarLead,
   asignarLead,
@@ -252,7 +253,9 @@ const Bandeja = ({ catalogos, crm }: { catalogos: CatalogosLeads; crm: Catalogos
                   {hace(l.ultimo_envio_en)}
                   {l.envios > 1 && ` · escribió ${l.envios} veces`}
                 </span>
-                <span title="Puntaje: completitud y señales de interés">{l.puntaje} pts</span>
+                <span title="Puntaje: completitud y señales de interés">
+                  {l.temperatura && <Temperatura valor={l.temperatura} />} {l.puntaje} pts
+                </span>
               </p>
               {!l.asignado_a && l.estado === "nuevo" && (
                 <p className="text-[11px] text-amber-700 dark:text-amber-400">Sin asignar</p>
@@ -291,6 +294,17 @@ const Bandeja = ({ catalogos, crm }: { catalogos: CatalogosLeads; crm: Catalogos
     </div>
   );
 };
+
+/** Frío, tibio o caliente: la decide una persona, no el puntaje. */
+const Temperatura = ({ valor }: { valor: string }) => (
+  <span
+    className={`inline-block rounded px-1.5 text-[11px] text-white ${
+      valor === "caliente" ? "bg-red-600" : valor === "tibio" ? "bg-amber-500" : "bg-sky-600"
+    }`}
+  >
+    {valor}
+  </span>
+);
 
 const Dato = ({ etiqueta, valor }: { etiqueta: string; valor?: React.ReactNode }) =>
   valor ? (
@@ -395,12 +409,21 @@ const DetalleLead = ({
           valor={lead.pagina && <span className="text-xs">{lead.pagina}</span>}
         />
         <Dato etiqueta="Puntaje" valor={`${lead.puntaje} / 100`} />
+        <Dato etiqueta="Temperatura" valor={lead.temperatura && <Temperatura valor={lead.temperatura} />} />
         <Dato etiqueta="Envíos" valor={lead.envios > 1 ? `${lead.envios} (volvió a escribir)` : null} />
         <Dato etiqueta="Consentimiento" valor={lead.consentimiento ? "Otorgado" : "No otorgado"} />
         {Object.entries(lead.datos ?? {}).map(([k, v]) => (
           <Dato key={k} etiqueta={k} valor={v} />
         ))}
       </div>
+
+      <PanelIa
+        entidad="lead"
+        id={lead.id}
+        onAplicado={(accion) => {
+          if (accion === "temperatura") actuar(() => obtenerLead(lead.id));
+        }}
+      />
 
       {lead.mensaje && (
         <div className="border rounded p-3 bg-muted/40">

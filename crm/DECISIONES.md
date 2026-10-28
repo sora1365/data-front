@@ -563,3 +563,20 @@ llevaba tres días sin respuesta. El ticket es la unidad que permite contestarlo
 La pantalla sólo existe en escritorio: la versión móvil del CRM no tiene
 ninguna de las pantallas de FRIDAY (agenda, postventa, soporte…), sólo las de
 Atomic. Detalles en `back/src/modules/crm/tickets/README.md`.
+
+## IA comercial: propone, una persona firma
+
+Resumen de la oportunidad o del ticket, calificación del lead y siguiente paso,
+en un recuadro «Asistente» de cada ficha. Lo que dice la IA no cambia nada
+solo: la tarea, la temperatura del lead y el borrador de respuesta se aplican
+con un botón y quedan firmados por quien lo pulsó. Cada análisis se guarda con
+quién lo pidió, el modelo y lo que costó.
+
+- **No se analiza solo**, ni al abrir la ficha ni de noche: se pide. Si nada
+  cambió desde el último del día, se devuelve ése sin volver a pagar.
+- **Sin llave no aparece**, en vez de simular respuestas.
+- **No viajan correos ni teléfonos**, tampoco los escritos dentro de un mensaje.
+- **La temperatura no es el puntaje**: el puntaje dice cuán completo es el
+  lead; la temperatura, cuántas ganas tiene de comprar, y la pone una persona.
+
+Detalles en `back/src/modules/crm/ia/README.md`.

@@ -16,6 +16,7 @@ import {
   type EstadoTicket,
   type FichaTicket as Ficha,
 } from "../providers/friday/tickets";
+import { PanelIa } from "../ia/PanelIa";
 import { BuscarEmpresa, EtiquetaPrioridad, EtiquetaSla, fechaCorta, SELECT } from "./comunes";
 
 type Modo = "respuesta" | "nota" | "cliente";
@@ -292,6 +293,19 @@ export const FichaTicket = ({
             </>
           )}
         </section>
+      )}
+
+      {!cerrado && (
+        <PanelIa
+          entidad="ticket"
+          id={t.id}
+          onBorrador={(borrador) => {
+            // Al cuadro de respuesta y no directo al historial: es un borrador,
+            // y quien atiende lo lee y lo corrige antes de anotarlo.
+            setModo("respuesta");
+            setTexto(borrador);
+          }}
+        />
       )}
 
       {/* --------------------------------------------------------- historial */}

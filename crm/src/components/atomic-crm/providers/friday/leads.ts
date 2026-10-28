@@ -24,6 +24,8 @@ export interface Lead {
   pagina?: string | null;
   asignado_a: string | null;
   puntaje: number;
+  /** La pone una persona, a mano o aceptando la que propone la IA. */
+  temperatura?: "frio" | "tibio" | "caliente" | null;
   envios: number;
   recibido_en: string;
   ultimo_envio_en: string;
