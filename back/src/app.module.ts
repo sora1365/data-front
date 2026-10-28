@@ -23,6 +23,7 @@ import { PautaModule } from './modules/crm/pauta/pauta.module';
 import { TicketsModule } from './modules/crm/tickets/tickets.module';
 import { IaModule } from './modules/crm/ia/ia.module';
 import { DuplicadosModule } from './modules/crm/duplicados/duplicados.module';
+import { ExportacionModule } from './modules/crm/exportacion/exportacion.module';
 import { databaseSslConfig } from './database/database-ssl';
 
 @Module({
@@ -70,6 +71,7 @@ import { databaseSslConfig } from './database/database-ssl';
     TicketsModule,
     IaModule,
     DuplicadosModule,
+    ExportacionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

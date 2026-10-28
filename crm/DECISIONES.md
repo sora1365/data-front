@@ -598,3 +598,18 @@ menú de usuario → Duplicados.
   «no son la misma» no se vuelve a proponer.
 
 Detalles en `back/src/modules/crm/duplicados/README.md`.
+
+## Exportación completa y verificable
+
+Todo el CRM en un ZIP —un CSV por tabla y un manifiesto con la huella de
+cada una—, desde el menú de usuario → Exportar datos.
+
+- **Completa**: las tablas salen del catálogo de Postgres. Sólo faltan las
+  llaves de los enlaces públicos, que son credenciales, y el manifiesto lo dice.
+- **Coherente**: se lee todo en una sola foto de la base.
+- **Verificable**: con `sha256sum` sin FRIDAY, o subiéndola, que además la
+  compara con la copia del manifiesto guardada al exportar: cambiar una fila y
+  su huella en el ZIP no basta para que pase.
+- **Anotada**: cada exportación queda con quién la sacó, cuándo y qué llevaba.
+
+Detalles en `back/src/modules/crm/exportacion/README.md`.

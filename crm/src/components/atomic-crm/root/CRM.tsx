@@ -70,6 +70,7 @@ import { PropuestasPage } from "../propuestas/PropuestasPage";
 import { PostventaPage } from "../postventa/PostventaPage";
 import { TicketsPage } from "../tickets/TicketsPage";
 import { DuplicadosPage } from "../duplicados/DuplicadosPage";
+import { ExportacionPage } from "../exportacion/ExportacionPage";
 import { ListasPage } from "../listas/ListasPage";
 import { SeguimientoPage } from "../seguimiento/SeguimientoPage";
 
@@ -292,6 +293,7 @@ const DesktopAdmin = (
         <Route path={PostventaPage.path} element={<PostventaPage />} />
         <Route path={TicketsPage.path} element={<TicketsPage />} />
         <Route path={DuplicadosPage.path} element={<DuplicadosPage />} />
+        <Route path={ExportacionPage.path} element={<ExportacionPage />} />
         <Route path={ListasPage.path} element={<ListasPage />} />
       </CustomRoutes>
       <Resource name="deals" {...deals} />

@@ -1,4 +1,4 @@
-import { CopyCheck, FileText, Import, Settings, User, Users } from "lucide-react";
+import { CopyCheck, FileDown, FileText, Import, Settings, User, Users } from "lucide-react";
 import { CanAccess, useTranslate, useUserMenu } from "ra-core";
 import { Link, matchPath, useLocation } from "react-router";
 import { RefreshButton } from "@/components/admin/refresh-button";
@@ -9,6 +9,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useConfigurationContext } from "../root/ConfigurationContext";
 import { ImportPage } from "../misc/ImportPage";
 import { DuplicadosPage } from "../duplicados/DuplicadosPage";
+import { ExportacionPage } from "../exportacion/ExportacionPage";
 import { ChangelogPage } from "../misc/ChangelogPage";
 import { GlobalSearchButton } from "../search/GlobalSearchButton";
 
@@ -163,6 +164,7 @@ const Header = () => {
                   </CanAccess>
                   <ImportFromJsonMenuItem />
                   <DuplicadosMenuItem />
+                  <ExportarMenuItem />
                   <ChangelogMenuItem />
                 </UserMenu>
               </div>
@@ -273,6 +275,21 @@ const DuplicadosMenuItem = () => {
       <Link to={DuplicadosPage.path} className="flex items-center gap-2">
         <CopyCheck />
         Duplicados
+      </Link>
+    </DropdownMenuItem>
+  );
+};
+
+const ExportarMenuItem = () => {
+  const userMenuContext = useUserMenu();
+  if (!userMenuContext) {
+    throw new Error("<ExportarMenuItem> must be used inside <UserMenu>");
+  }
+  return (
+    <DropdownMenuItem asChild onClick={userMenuContext.onClose}>
+      <Link to={ExportacionPage.path} className="flex items-center gap-2">
+        <FileDown />
+        Exportar datos
       </Link>
     </DropdownMenuItem>
   );
